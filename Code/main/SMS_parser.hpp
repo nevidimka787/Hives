@@ -82,11 +82,62 @@ namespace pars_states {
   } pars_sms_state_t;
 
   pars_state_t getSMSID() {
+    bool skip_spaces = true;
+    bool overflow = false;
+    long exp = 1L;
+    long id = 0L;
 
+PARS_SMS_ID:
+    while (sim800.available) {
+      char c = sim800.read();
+
+      if (skip_spaces && c != ' ' && c != '\t') {
+        skip_spaces = false;
+      }
+      if (!skip_spaces) {
+        if (isDigitSymbol(c)) {
+          if (overflow) {
+            return return_codes::ERROR;
+          }
+          id += (long)(c - '0') * exp;
+          if (exp >= 1000000000L) {
+            overflow = true;
+          } else {
+            exp *= 10L;
+          }
+        }
+      }
+
+      for (int i = 0; i < 1000; ++i) {
+        delay(10);
+        if (sim800.available()) {
+          goto PARS_SMS_ID;
+        }
+      }
+    }
+
+    id = reversNumber(id);
   }
 
   pars_state_t parsNumber() {
+PARS_MUNBER:
 
+    int exp = 16;
+    long exp1 = 1000000000;
+    long exp2 = 1000000000;
+
+    while (sim800.available()) {
+      char c = sim800.read();
+
+      
+    }
+    
+    for (int i = 0; i < 1000; ++i) {
+      delay(10);
+      if (sim800.available()) {
+        goto PARS_MUNBER;
+      }
+    }
   }
 };
 
@@ -107,7 +158,7 @@ PARS_SIM800_RESPONSE:
       case INPUT_COMMAND_REPEAT:  pars_state = (c == '\n') ? HEAD : INPUT_COMMAND_REPEAT;                 break;
       case HEAD:                  pars_state = isSpaceSymbol(c) ? HEAD : (c == '+') ? CMGL : ERROR;       break;
       case CMGL:                  pars_state = isSpaceSymbol(c) ? ERROR : (c == ':') ? GET_SMS_ID : CMGL; break;
-      case GET_SMS_ID:            pars_state = getSMSID();BEGIN_SMS_TYPE,                                 break;
+      case GET_SMS_ID:            pars_state = getSMSID();                                                break;
       
       case BEGIN_SMS_TYPE:  pars_state = (c == '\n') ? ERROR : (c == '\"') : SMS_TYPE ? BEGIN_SMS_TYPE;     break;
       case SMS_TYPE:        pars_state = (c == '\n') ? ERROR : (c == '\"') : END_SMS_TYPE ? SMS_TYPE;       break;

@@ -82,8 +82,6 @@ void setup() {
     printError("main: Temperature sensor initialisation failed.");
     fatalError();
   }
-
-  Serial.println();
 }
 
 void loop() {

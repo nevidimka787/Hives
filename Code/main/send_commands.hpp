@@ -128,3 +128,12 @@ WHILE_BEGIN:
 
   return SUCCESS;
 }
+
+return_code_t printAreaparametersToSerial() {
+  Serial.print("printAreaparametersToSerial:\nHumidity: ");
+  Serial.println(dht.readHumidity());
+  Serial.print("Temperature: ");
+  Serial.println(dht.readTemperature());
+
+  return SUCCESS;
+}
