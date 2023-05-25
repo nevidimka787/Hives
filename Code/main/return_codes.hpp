@@ -4,7 +4,7 @@ namespace return_codes {
   typedef enum {
     ERROR     = -1,
     SUCCESS   = 0,
-    PERFORMED = 1,
+    NOT_ABSOLUTE_SUCCESS = 1,
 
     NO_REQUEST = 2,
 

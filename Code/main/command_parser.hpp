@@ -1,10 +1,15 @@
 #pragma once
 
-#include "eeprom_commands.hpp"
+#include <SoftwareSerial.h>
+
+#include "commands_list.hpp"
+#include "pars_request_struct.hpp"
 #include "print_debug.hpp"
 #include "return_codes.hpp"
-#include "send_commands.hpp"
+#include "serial_helper.hpp"
 #include "str_macroses.hpp"
+
+using namespace return_codes;
 
 #define IF_GOTO(contition, if_goto) { \
   if (contition) {                    \
@@ -17,26 +22,22 @@
 char last_char;
 #endif
 
-struct parsCondition {
-  int special_symbol_detected;
-};
-
-int getSymbolIfAvailable() {
-  if (Serial.available()) {
+int getSymbolIfAvailable(Stream& serial) {
+  if (serial.available()) {
 #ifdef getSymbolIfAvailableAndNotSpace_BEGUG
-    last_char = Serial.read();
+    last_char = serial.read();
     return last_char;
 #else // getSymbolIfAvailableAndNotSpace_BEGUG
-    return Serial.read();
+    return serial.read();
 #endif // getSymbolIfAvailableAndNotSpace_BEGUG
   }
   return -1;
 }
 
-int getSymbolIfAvailableAndNotSpace() {
+int getSymbolIfAvailableAndNotSpace(Stream& serial) {
 getSymbolIfAvailableAndNotSpace_BEGIN:
-  if (Serial.available()) {
-    char c = Serial.read();
+  if (serial.available()) {
+    char c = serial.read();
 #ifdef getSymbolIfAvailableAndNotSpace_BEGUG
     last_char = c;
 #endif // getSymbolIfAvailableAndNotSpace_BEGUG
@@ -45,189 +46,267 @@ getSymbolIfAvailableAndNotSpace_BEGIN:
 
   for (int i = 0; i < 1000; ++i) {
     delay(10);
-    if (Serial.available()) {
+    if (serial.available()) {
       goto getSymbolIfAvailableAndNotSpace_BEGIN;
     }
   }
   return -1;
 }
 
-return_code_t parsRequestFromSerial() {
+return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
   /*
   commands list:
+
+  DELETE_SMS
   CHECK_OK
   CMGF_EN
+  GET_LAST_SMS_ID
+  SEND_SMS
   SET_NUMBER
   SET_MAX_TEMPERATURE
   SET_MAX_HUMIDITY
   SET_MIN_TEMPERATURE
   SET_MIN_TEMPERATURE
   PRINT_SMS
+  PRINT_SMS_ALL
   PRINT_STORED_DATA
+
+  ? -- PRINT_MEASURED_DATA
+  # -- DEBUG_COMM
   */
 
-  if (!Serial.available()) {
+  if (!serial.available()) {
     return NO_REQUEST;
   }
-  switch (getSymbolIfAvailableAndNotSpace()) {
-  case 'C':
-    switch (getSymbolIfAvailableAndNotSpace()) {
-    case 'H':
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'C', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'K', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'O', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'K', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
 
-      printDebug("parsRequestFromSerial: Sim800Check\n");
-      return Sim800Check();
+  // Serch by tree.
+  switch (getSymbolIfAvailableAndNotSpace(serial)) {
+  case 'D':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+      request.commands_list |= DELETE_SMS;
+      return SUCCESS;
+  case 'C':
+    switch (getSymbolIfAvailableAndNotSpace(serial)) {
+    case 'H':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'C', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'K', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'O', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'K', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+      request.commands_list |= SUCCESS;
+      return SUCCESS;
     case 'M':
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'G', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'F', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'N', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'G', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'F', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'N', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
       
-      printDebug("parsRequestFromSerial: Sim800Config_CMGF\n");
-      return Sim800Config_CMGF();
+      request.commands_list |= CMGF_EN;
+      return SUCCESS;
     default: goto RETURN_ERROR; 
     }
+  case 'G':
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+    request.commands_list |= GET_LAST_SMS_ID;
+    return SUCCESS;
   case 'S':
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-    
-    switch (getSymbolIfAvailableAndNotSpace()) {
-    case 'M':   
-      switch (getSymbolIfAvailableAndNotSpace()) {
-      case 'I':
-        IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'N', RETURN_ERROR);
-        IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-        
-        switch (getSymbolIfAvailableAndNotSpace()) {
-        case 'H':
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'U', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'M', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'I', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'D', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'I', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'Y', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    switch (getSymbolIfAvailableAndNotSpace(serial)) {
+    case 'N':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-          printDebug("parsRequestFromSerial: setMinHumidityFromSerial\n");
-          return setMinHumidityFromSerial();
-        case 'T':
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'M', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'P', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'A', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'U', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
+      request.commands_list |= SEND_SMS;
+      return SUCCESS;
+    case 'T':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      
+      switch (getSymbolIfAvailableAndNotSpace(serial)) {
+      case 'M':   
+        switch (getSymbolIfAvailableAndNotSpace(serial)) {
+        case 'I':
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'N', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+          
+          switch (getSymbolIfAvailableAndNotSpace(serial)) {
+          case 'H':
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'Y', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-          printDebug("parsRequestFromSerial: setMinTemperatureFromSerial\n");
-          return setMinTemperatureFromSerial();
+            request.commands_list |= SET_MIN_HUMIDITY;
+            request.min_humidity = serial.parseFloat();
+            return SUCCESS;
+          case 'T':
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'P', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+            request.commands_list |= SET_MIN_TEMPERATURE;
+            request.min_temperature = serial.parseFloat();
+            return SUCCESS;
+          default: goto RETURN_ERROR;
+          }
+        case 'A':
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'X', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+          
+          switch (getSymbolIfAvailableAndNotSpace(serial)) {
+          case 'H':
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'Y', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+            request.commands_list |= SET_MAX_HUMIDITY;
+            request.max_humidity = serial.parseFloat();
+            return SUCCESS;
+          case 'T':
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'P', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+            request.commands_list |= SET_MAX_TEMPERATURE;
+            request.max_temperature = serial.parseFloat();
+            return SUCCESS;
+          default: goto RETURN_ERROR;
+          }
         default: goto RETURN_ERROR;
         }
-      case 'A':
-        IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'X', RETURN_ERROR);
-        IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-        
-        switch (getSymbolIfAvailableAndNotSpace()) {
-        case 'H':
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'U', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'M', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'I', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'D', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'I', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'Y', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
+      case 'N':
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'B', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-          printDebug("parsRequestFromSerial: setMaxHumidityFromSerial\n");
-          return setMaxHumidityFromSerial();
-        case 'T':
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'M', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'P', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'A', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'U', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-          IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
-
-          printDebug("parsRequestFromSerial: setMaxTemperatureFromSerial\n");
-          return setMaxTemperatureFromSerial();
-        default: goto RETURN_ERROR;
-        }
+        request.commands_list |= SET_NUMBER;
+        scanPhoneNumber(serial, request.phone_number);
+        return SUCCESS;
       default: goto RETURN_ERROR;
       }
-    case 'N':
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'U', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'M', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'B', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
-
-      printDebug("parsRequestFromSerial: setPhoneNumberFromSerial\n");
-      return setPhoneNumberFromSerial();
     default: goto RETURN_ERROR;
     }
   case 'P':
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'I', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'N', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'S', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'N', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
 
-    switch (getSymbolIfAvailableAndNotSpace()) {
+    switch (getSymbolIfAvailableAndNotSpace(serial)) {
     case 'M':
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'S', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
 
-      printDebug("parsRequestFromSerial: printSMSToSerial\n");
-      return printSMSToSerial();
+      switch (getSymbolIfAvailableAndNotSpace(serial)) {
+      case '_':
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+       
+        request.commands_list |= PRINT_SMS_ALL;
+        return SUCCESS;
+      case -1:
+        request.commands_list |= PRINT_SMS;
+        request.sms_number = serial.parseInt();
+        return SUCCESS;
+      default: goto RETURN_ERROR;
+      }
+
     case 'T':
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'O', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'R', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'E', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'D', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != '_', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'D', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'A', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'T', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != 'A', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1,  RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'O', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
       
-      printDebug("parsRequestFromSerial: setPhoneNumberFromSerial\n");
-      return printStoredDataToSerial();
-    default:  goto RETURN_ERROR;
+      request.commands_list |= PRINT_STORED_DATA;
+      return SUCCESS;
+    default: goto RETURN_ERROR;
     }
   case '?':
-    IF_GOTO(getSymbolIfAvailableAndNotSpace() != -1, RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
 
-    printDebug("parsRequestFromSerial: printAreaparametersToSerial\n");
-    return printAreaparametersToSerial();
+    request.commands_list |= PRINT_MEASURED_DATA;
+    return SUCCESS;
+  case '#':
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
+
+    request.commands_list |= DEBUG_COMM;
+    return SUCCESS;
   default: goto RETURN_ERROR;
   }
   
 RETURN_ERROR:
-  printError("parsRequestFromSerial: Command unrecognised.\n");
 #ifdef getSymbolIfAvailableAndNotSpace_BEGUG
-  printDebug("parsRequestFromSerial: last char: \'");
+  printDebug(F("parsRequestFrom: last char: \'"));
   printDebugInLine(last_char);
   printDebugInLine("\'\n");
 #endif // getSymbolIfAvailableAndNotSpace_BEGUG

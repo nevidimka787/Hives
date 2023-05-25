@@ -48,8 +48,11 @@ DHT dht(DHTPIN, DHTTYPE);
 #include "blink.hpp"
 #include "command_parser.hpp"
 #include "init.hpp"
+#include "message_generator.hpp"
 #include "print_debug.hpp"
+#include "pars_request_struct.hpp"
 #include "return_codes.hpp"
+#include "serial_helper.hpp"
 
 void fatalError() {
   printError("FATAL ERROR\n");
@@ -60,16 +63,15 @@ void fatalError() {
   }
 }
 
-struct parsCondition pars_conditional;
-
-
 void setup() {
 #ifdef SERIAL_DEBUG
-  Serial.begin(9600);
+  Serial.begin(115200);
 #endif // SERIAL_DEBUG
   sim800.begin(9600);
 
-  return_code_t return_code = init(-1, pars_conditional);
+  printDebug(F("setup: Begin\n"));
+
+  return_code_t return_code = init(-1);
   
   dht.begin();
 
@@ -79,36 +81,41 @@ void setup() {
 
   float h = dht.readHumidity();
   if (h != h) {
-    printError("main: Temperature sensor initialisation failed.");
-    fatalError();
+    printWarning(F("main: Temperature sensor initialisation failed.\n"));
+    // fatalError();
   }
+
+  printDebug(F("setup: End\n"));
 }
 
 void loop() {
-  bool some_go = false;
-  while (sim800.available()) {
-    char val = sim800.read();
-    Serial.write(val);
+  struct ParsRequest request = {0};
+  if (sim800.available()) {
+    printDebug(F("main: unparsed data begin\n"));
+    while (sim800.available()) {
+      char val = sim800.read();
+      Serial.write(val);
+    }
+    printDebug(F("main: unparsed data end\n"));
   }
 
-#ifdef LAST
-  while (Serial.available()) {
-    parsInput(pars_conditional, Serial.read());
+  return_code_t result = parsRequestFrom(Serial, request);
+  if (result == SUCCESS) {
+    printRequest(request, Serial);
+    result = doRequestAsSerial(request);
   }
-#else   // LAST
-  return_code_t result = parsRequestFromSerial();
   switch (result) {
   case SUCCESS:
-    printDebug("main: SUCCESS\n");
+    printDebug(F("main: SUCCESS\n"));
     break;
   case ERROR:
-    printDebug("main: ERROR\n");
+    printDebug(F("main: ERROR\n"));
     break;
   case NO_REQUEST:
     blinkAndWait_2();
     break;
   default:
-    printDebug("main: unrecognise response ");
+    printDebug(F("main: unrecognise response "));
     printDebugInLine(result);
     printDebugInLine('\t');
     printDebugInLine(SUCCESS);
@@ -117,7 +124,6 @@ void loop() {
     blinkAndWait_4();
     break;
   }
-#endif  // LAST
 }
 
 

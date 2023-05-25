@@ -24,3 +24,11 @@ int compareStrs(const char* str1, const char* str2) {
   }
   return 0;
 }
+
+void addToEndOfStr(char* str, int last_symbol_id, char symbol) {
+  for (int symbol_id = 0; symbol_id < last_symbol_id; ++symbol_id) {
+    str[symbol_id] = str[symbol_id + 1];
+  }
+  str[last_symbol_id] = symbol;
+  return;
+}

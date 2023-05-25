@@ -4,6 +4,7 @@
 
 #include "print_debug.hpp"
 #include "return_codes.hpp"
+#include "serial_helper.hpp"
 #include "str_macroses.hpp"
 
 using namespace return_codes;
@@ -33,9 +34,6 @@ return_code_t EEPROM_putStr(int idx, const char* str) {
   }
   EEPROM.put(idx + c, str[c]);
   
-  printDebug("EEPROM_putStr: ");
-  printDebugInLine(c + 1);
-  printDebugInLine("\n");
   return SUCCESS;
 }
 
@@ -47,9 +45,6 @@ return_code_t EEPROM_getStr(int idx, char* str) {
       break;
     }
   }
-  printDebug("EEPROM_getStr: ");
-  printDebugInLine(c);
-  printDebugInLine("\n");
   return SUCCESS;
 }
 
@@ -66,68 +61,14 @@ struct StoredData getStoredData() {
   return data;  
 }
 
+void getPhoneNumber(char* phone_number) {
+  EEPROM_getStr(PHONE_NUMBER_ID, phone_number);
+}
+
 return_code_t setPhoneNumber(const char phone_number[20]) {
-  printDebug("setPhoneNumber: ");
-  printDebugInLine(phone_number);
-  printDebugInLine("\n");
   EEPROM_putStr(PHONE_NUMBER_ID, phone_number);
 
   return SUCCESS;
-}
-
-return_code_t setPhoneNumberFromSerial() {
-  int skip_spaces = 1;
-
-  char phone_number[20] = "";
-  int p = 1; // zero symbol set in the first while cycle
-
-SKIP_SPACES:
-  while (Serial.available()) {
-    phone_number[0] = Serial.read();    // first symbol set here
-    if (!isSpaceSymbol(phone_number[0])) {
-      goto GET_PHONE_NUMBER;
-    }
-  }
-
-  for (int i = 0; i < 1000; ++i) {
-    delay(10);
-    if (Serial.available()) {
-      goto SKIP_SPACES;
-    }
-  }
-
-GET_PHONE_NUMBER:
-  while (Serial.available()) {
-    if (p == 16) {
-      printError("Phone number is too long.\n");
-      return ERROR;
-    }
-
-    phone_number[p] = Serial.read();
-
-    if (isSpaceSymbol(phone_number[p])) {
-      phone_number[p] = '\0';
-      break;
-    }
-    if (!isDigitSymbol(phone_number[p])) {
-      printError("Phone number is incorect.\n");
-      return ERROR;
-    }
-    ++p;
-  }
-  
-  for (int i = 0; i < 1000; ++i) {
-    delay(10);
-    if (Serial.available()) {
-      goto GET_PHONE_NUMBER;
-    }
-  }
-
-  printDebug("setPhoneNumberFromSerial: ");
-  printDebugInLine(phone_number);
-  printDebugInLine("\n");
-
-  return setPhoneNumber(phone_number);
 }
 
 return_code_t setMaxTemperature(float temperature) {
@@ -135,8 +76,8 @@ return_code_t setMaxTemperature(float temperature) {
   return SUCCESS;
 }
 
-return_code_t setMaxTemperatureFromSerial() {
-  return setMaxTemperature(Serial.parseFloat());
+return_code_t setMaxTemperature(Stream& serial) {
+  return setMaxTemperature(serial.parseFloat());
 }
 
 return_code_t setMinTemperature(float temperature) {
@@ -144,8 +85,8 @@ return_code_t setMinTemperature(float temperature) {
   return SUCCESS;
 }
 
-return_code_t setMinTemperatureFromSerial() {
-  return setMinTemperature(Serial.parseFloat());
+return_code_t setMinTemperature(Stream& serial) {
+  return setMinTemperature(serial.parseFloat());
 }
 
 return_code_t setMaxHumidity(float humidity) {
@@ -153,8 +94,8 @@ return_code_t setMaxHumidity(float humidity) {
   return SUCCESS;
 }
 
-return_code_t setMaxHumidityFromSerial() {
-  return setMaxHumidity(Serial.parseFloat());
+return_code_t setMaxHumidity(Stream& serial) {
+  return setMaxHumidity(serial.parseFloat());
 }
 
 return_code_t setMinHumidity(float humidity) {
@@ -162,24 +103,24 @@ return_code_t setMinHumidity(float humidity) {
   return SUCCESS;
 }
 
-return_code_t setMinHumidityFromSerial() {
-  return setMinHumidity(Serial.parseFloat());
+return_code_t setMinHumidity(Stream& serial) {
+  return setMinHumidity(serial.parseFloat());
 }
 
-printStoredDataToSerial() {
+printStoredDataTo(Stream& serial) {
   struct StoredData data;
   data = getStoredData();
 
-  Serial.print("printStoredDataToSerial: phone number: +");
-  Serial.print(data.phone_number);
-  Serial.print("\nprintStoredDataToSerial: temperature max: ");
-  Serial.println(data.max_temperature);
-  Serial.print("printStoredDataToSerial: temperature min: ");
-  Serial.println(data.min_temperature);
-  Serial.print("printStoredDataToSerial: humidity max: ");
-  Serial.println(data.max_humidity);
-  Serial.print("printStoredDataToSerial: humidity min: ");
-  Serial.println(data.min_humidity);
+  serial.print(F("printStoredDataTo: phone number: +"));
+  serial.print(data.phone_number);
+  serial.print(F("\nprintStoredDataTo: temperature max: "));
+  serial.println(data.max_temperature);
+  serial.print(F("printStoredDataTo: temperature min: "));
+  serial.println(data.min_temperature);
+  serial.print(F("printStoredDataTo: humidity max: "));
+  serial.println(data.max_humidity);
+  serial.print(F("printStoredDataTo: humidity min: "));
+  serial.println(data.min_humidity);
   
   return SUCCESS;
 }
