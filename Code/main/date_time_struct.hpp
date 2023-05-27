@@ -17,7 +17,7 @@ struct date_time {
 using namespace return_codes;
 
 void printDateTime(struct date_time& date_time_i, Stream& serial) {
-  serial.print("printDateTime: yy/mm/dd,hh:mm:ss ")
+  serial.print("printDateTime: yy/mm/dd,hh:mm:ss ");
   if (date_time_i.year < 10) {
     serial.print('0');
   }
