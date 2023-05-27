@@ -4,6 +4,7 @@
 
 #include "commands_list.hpp"
 #include "eeprom_commands.hpp"
+#include "date_time_struct.hpp"
 #include "print_debug.hpp"
 #include "pars_request_struct.hpp"
 #include "return_codes.hpp"
@@ -120,6 +121,11 @@ return_code_t deleteSMS(int sms_number, Stream& request_to_serial = sim800) {
   return checkSim800OK();
 }
 
+return_code_t deleteSMSAll(Stream& request_to_serial = sim800) {
+  request_to_serial.println(F("AT+CMGDA=\"DEL ALL\""));
+  return checkSim800OK();
+}
+
 return_code_t Sim800Check(int response_delay = 1000) {
   sim800.println(F("AT"));
 
@@ -127,28 +133,25 @@ return_code_t Sim800Check(int response_delay = 1000) {
   return checkSim800OK();
 }
 
-return_code_t Sim800Config_CMGF(int arg = 1, int response_delay = 100) {
+return_code_t Sim800Config(int arg = 1, int response_delay = 100) {
   sim800.print(F("AT+CMGF="));
   sim800.println(arg);
   delay(response_delay);
-  return checkSim800OK();
-}
-
-return_code_t Sim800SendMessage(int phone_number, char message[4096], int response_delay = 100) {
-  sim800.print(F("AT+CMGS=\"+"));
-  sim800.print(phone_number);
-  sim800.println('\"');
-
-  delay(response_delay);
-  if (!sim800.available() || sim800.read() != '>') {
-    printError(F("Failed to send message.\n"));
+  if (checkSim800OK() != SUCCESS) {
     return ERROR;
   }
 
-  sim800.print(message);
-  sim800.print((char)27); // send message
+  sim800.println(F("AT+CSCS=\"GSM\""));
+  delay(response_delay);
+  if (checkSim800OK() != SUCCESS) {
+    return ERROR;
+  }
 
-  return checkSim800OK();
+  sim800.println(F("AT+CLTS=1;&W"));
+  delay(response_delay);
+  if (checkSim800OK() != SUCCESS) {
+    return ERROR;
+  }
 }
 
 return_code_t printAllSMSToSerial() {
@@ -177,13 +180,44 @@ return_code_t printSMSToSerial(int sms_number) {
   return printUntilOk(sim800);
 }
 
-return_code_t printMeasuredDataToSerial() {
-  Serial.print(F("printMeasuredDataToSerial:\nHumidity: "));
-  Serial.println(dht.readHumidity());
-  Serial.print(F("Temperature: "));
-  Serial.println(dht.readTemperature());
+return_code_t printMeasuredDataTo(Stream& serial) {
+  serial.print(F("printMeasuredDataToSerial:\nHumidity: "));
+  serial.println(dht.readHumidity());
+  serial.print(F("Temperature: "));
+  serial.println(dht.readTemperature());
 
   return SUCCESS;
+}
+
+return_code_t shortPrintMeasuredDataTo(Stream& serial) {
+  serial.print(F("Environmental data\nTemperature: "));
+  serial.print(dht.readTemperature());
+  serial.print(F(" C\nHumidity: "));
+  serial.print(dht.readHumidity());
+  serial.println(F(" %"));
+
+  return SUCCESS;
+}
+
+return_code_t updateDateTime(struct date_time& date_time_i, Stream& data_source_serial = sim800) {
+  data_source_serial.println(F("AT+CCLK?"));
+  
+  while (waitAvailable(data_source_serial) == SUCCESS) {
+    char c = data_source_serial.read();
+    if (c == '\"') {
+      if (scanDateTime(date_time_i, data_source_serial) != SUCCESS) {
+        return ERROR;
+      }
+
+#ifdef SERIAL_DEBUG
+      printDateTime(date_time_i, Serial);
+#endif
+
+      return checkSim800OK();
+    }
+  }
+
+  return ERROR;
 }
 
 

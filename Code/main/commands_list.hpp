@@ -3,7 +3,7 @@
 enum COMMANDS {
   EMPTY_COMMAND       = 0,
 
-  DELETE_SMS          = 1 << 0,
+  DELETE_SMS_ALL      = 1 << 0,
   CHECK_OK            = 1 << 1,
   CMGF_EN             = 1 << 2,
   GET_LAST_SMS_ID     = 1 << 3,
@@ -17,6 +17,7 @@ enum COMMANDS {
   PRINT_SMS_ALL       = 1 << 11,
   PRINT_STORED_DATA   = 1 << 12,
   PRINT_MEASURED_DATA = 1 << 13,
+  UPDATE_DATE_TIME    = 1 << 14,
 
   DEBUG_COMM          = 1 << 15
 };

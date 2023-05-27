@@ -8,10 +8,11 @@
 
 using namespace return_codes;
 
+return_code_t doRequestAsSIM800(struct ParsRequest& request);
+
 return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
   char phone_number[20];
   getPhoneNumber(phone_number);
-  Serial.println(phone_number);
   to_serial.print(F("AT+CMGS=\"+"));
   to_serial.print(phone_number);
   to_serial.println(F("\""));
@@ -25,10 +26,10 @@ return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
 
 return_code_t doRequestAsSerial(struct ParsRequest& request) {
   long return_codes = 0;
-  if (request.commands_list & DELETE_SMS) {
-    printDebug(F("parsRequest: deleteSms\n"));
-    if (deleteSMS(request.sms_number) == SUCCESS) {
-      return_codes |= DELETE_SMS;
+  if (request.commands_list & DELETE_SMS_ALL) {
+    printDebug(F("parsRequest: deleteSMSAll\n"));
+    if (deleteSMSAll() == SUCCESS) {
+      return_codes |= DELETE_SMS_ALL;
     }
   }
   if (request.commands_list & CHECK_OK) {
@@ -39,7 +40,7 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
   }
   if (request.commands_list & CMGF_EN) {
     printDebug(F("parsRequest: Sim800Config_CMGF\n"));
-    if (Sim800Config_CMGF() == SUCCESS) {
+    if (Sim800Config() == SUCCESS) {
       return_codes |= CMGF_EN;
     }
   }
@@ -111,9 +112,17 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
   }
   if (request.commands_list & PRINT_MEASURED_DATA) {
     printDebug(F("parsRequest: printMeasuredDataToSerial\n"));
-    if (printMeasuredDataToSerial() == SUCCESS) {
+    if (printMeasuredDataTo(Serial) == SUCCESS) {
       return_codes |= PRINT_MEASURED_DATA;
     }
+  }
+  if (request.commands_list & UPDATE_DATE_TIME) {
+    printDebug(F("parsRequest: printMeasuredDataToSerial\n"));
+    struct date_time date_time_i;
+    if (updateDateTime(date_time_i, sim800) == SUCCESS) {
+      return_codes |= UPDATE_DATE_TIME;
+    }
+
   }
   if (request.commands_list & DEBUG_COMM) {
     printDebug(F("parsRequest: DEBUG_COMM: parsSMS 2\n"));
@@ -121,6 +130,7 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
     struct ParsRequest request = {0};
     if (parsSMS(2, request, sim800) == SUCCESS) {
       printRequest(request, Serial);
+      doRequestAsSIM800(request);
       return_codes |= DEBUG_COMM;
     }
   }
@@ -136,6 +146,16 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
 
 return_code_t doRequestAsSIM800(struct ParsRequest& request) {
   long return_codes = 0;
+
+  if (request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA)) {
+    char phone_number[20];
+    getPhoneNumber(phone_number);
+    sim800.print(F("AT+CMGS=\"+"));
+    sim800.print(phone_number);
+    sim800.println(F("\""));
+    waitAvailable(sim800);
+  }
+
   if (request.commands_list & SET_MAX_TEMPERATURE) {
     
     printDebug(F("parsRequest: setMaxTemperature\n"));
@@ -166,15 +186,30 @@ return_code_t doRequestAsSIM800(struct ParsRequest& request) {
   }
   if (request.commands_list & PRINT_STORED_DATA) {
     printDebug(F("parsRequest: printStoredDataTo\n"));
-    if (printStoredDataTo(Serial) == SUCCESS) {
+    if (shortPrintStoredDataTo(sim800) == SUCCESS) {
       return_codes |= PRINT_STORED_DATA;
     }
   }
   if (request.commands_list & PRINT_MEASURED_DATA) {
     printDebug(F("parsRequest: printMeasuredDataToSerial\n"));
-    if (printMeasuredDataToSerial() == SUCCESS) {
+    if (shortPrintMeasuredDataTo(sim800) == SUCCESS) {
       return_codes |= PRINT_MEASURED_DATA;
     }
+  }
+
+  if (request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA)) {
+    if (return_codes & (PRINT_STORED_DATA | PRINT_MEASURED_DATA)) {
+      sim800.println((char)26); // send message
+      
+      return_codes &= ~(PRINT_STORED_DATA | PRINT_MEASURED_DATA);
+      return_codes |=
+      checkSim800OK(10000) == SUCCESS ?
+      request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA) :
+      0;
+    } else {
+      sim800.println((char)27); // cancel
+    }
+    
   }
 
   if (return_codes == request.commands_list) {

@@ -53,6 +53,20 @@ DHT dht(DHTPIN, DHTTYPE);
 #include "pars_request_struct.hpp"
 #include "return_codes.hpp"
 #include "serial_helper.hpp"
+#include "system_main.hpp"
+
+// only millis
+unsigned long system_update_time_point;
+unsigned long system_update_period = 60000; // 60 seconds
+unsigned long date_time_update_time_point;
+unsigned long date_time_update_delay;
+
+struct date_time global_date_time;
+
+struct system_info global_system_info = {0};
+
+return_code_t serial_result;
+return_code_t sim800_result;
 
 void fatalError() {
   printError("FATAL ERROR\n");
@@ -71,7 +85,10 @@ void setup() {
 
   printDebug(F("setup: Begin\n"));
 
-  return_code_t return_code = init(-1);
+  return_code_t return_code = init(
+    10,
+    global_date_time,
+    date_time_update_delay); // one attemp arout 10 seconds -> 100 seconds until timeout
   
   dht.begin();
 
@@ -86,6 +103,9 @@ void setup() {
   }
 
   printDebug(F("setup: End\n"));
+
+  system_update_time_point = millis();
+  date_time_update_time_point = millis();
 }
 
 void loop() {
@@ -94,17 +114,25 @@ void loop() {
     printDebug(F("main: unparsed data begin\n"));
     while (sim800.available()) {
       char val = sim800.read();
+#ifdef SERIAL_DEBUG
       Serial.write(val);
+#endif // SERIAL_DEBUG
     }
     printDebug(F("main: unparsed data end\n"));
+
+    printDebug(F("main: Event by sim800 response.\n"));
+
+    system_update_time_point = millis();
+    sim800_result = system_main_action(global_system_info);
   }
 
-  return_code_t result = parsRequestFrom(Serial, request);
-  if (result == SUCCESS) {
+  return_code_t serial_result = parsRequestFrom(Serial, request);
+  if (serial_result == SUCCESS) {
     printRequest(request, Serial);
-    result = doRequestAsSerial(request);
+    serial_result = doRequestAsSerial(request);
   }
-  switch (result) {
+
+  switch (serial_result) {
   case SUCCESS:
     printDebug(F("main: SUCCESS\n"));
     break;
@@ -116,13 +144,34 @@ void loop() {
     break;
   default:
     printDebug(F("main: unrecognise response "));
-    printDebugInLine(result);
+    printDebugInLine(serial_result);
     printDebugInLine('\t');
     printDebugInLine(SUCCESS);
     printDebugInLine('\n');
 
     blinkAndWait_4();
     break;
+  }
+
+  if (millis() - system_update_time_point >= system_update_period) {
+    system_update_time_point = millis();
+
+    printDebug(F("main: Every 60 seconds event.\n"));
+    
+    sim800_result = system_main_action(global_system_info);
+  }
+
+  if (sim800_result == ERROR) {
+    sim800_result = system_fix_action();
+  }
+
+  if (millis() - date_time_update_time_point >= date_time_update_delay) {
+    sim800_result = updateDateTime(global_date_time, sim800);
+    if (sim800_result == SUCCESS) {
+      // update at 1:00 am
+      date_time_update_delay = getdateTimeUpdateDelay(global_date_time);
+      date_time_update_time_point = millis();
+    }
   }
 }
 

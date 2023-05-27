@@ -38,8 +38,8 @@ void printRequest(struct ParsRequest& request, Stream& serial = Serial) {
 void printCommandsList(long commands_list, Stream& serial) {
   serial.print(F("commands_list: "));
   serial.print(commands_list);
-  serial.print(F("\nDELETE_SMS = "));
-  serial.print(commands_list & DELETE_SMS ? '1' : '0');
+  serial.print(F("\DELETE_SMS_ALL = "));
+  serial.print(commands_list & DELETE_SMS_ALL ? '1' : '0');
   serial.print(F("\nCHECK_OK = "));
   serial.print(commands_list & CHECK_OK ? '1' : '0');
   serial.print(F("\nCMGF_EN = "));

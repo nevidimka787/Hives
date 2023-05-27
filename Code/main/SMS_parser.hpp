@@ -1,6 +1,7 @@
 #pragma once
 
 #include "command_parser.hpp"
+#include "date_time_struct.hpp"
 #include "print_debug.hpp"
 #include "serial_helper.hpp"
 #include "str_macroses.hpp"
@@ -9,14 +10,7 @@
 @return number of SMS or 0
 */
 int getNewestSMSFromNumberUntilOK(Stream& serial) {
-  struct date_time {
-    char year;
-    char month;
-    char day;
-    char hour;
-    char minute;
-    char second;
-  } max_date_time = {
+  struct date_time max_date_time = {
     .year   = 0,
     .month  = 0,
     .day    = 0,

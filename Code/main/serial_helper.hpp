@@ -85,6 +85,40 @@ return_code_t getByteFromSerial(Stream& serial, char& result, char& last_char) {
   return SUCCESS;
 }
 
+return_code_t getByteFromSerial(Stream& serial, char& result) {
+  if (waitAvailable(serial) != SUCCESS) {
+    printError(F("getByteFromSerial: no input\n"));
+    return ERROR;
+  }
+
+  int answer = -1;
+  int exp = 1;
+
+  while (waitAvailable(serial) == SUCCESS) {
+    char digit = serial.read();
+    if (!isDigitSymbol(digit)) {
+      break;
+    }
+    if (answer == -1) {
+      answer = 0;
+    } else if (answer < 0) {
+      printError(F("getByteFromSerial: overflow\n"));
+      return ERROR;
+    }
+    digit -= '0';
+    answer += (int)digit * exp;
+    exp *= 10;
+  }
+
+  if (answer == -1) {
+    printError(F("getByteFromSerial: no number\n"));
+    return ERROR;
+  }
+  
+  result = reverseNumber(answer);
+  return SUCCESS;
+}
+
 return_code_t scanPhoneNumber(Stream& serial, char* phone_number) {
   int p = 1; // zero symbol set in the first while cycle
 

@@ -71,7 +71,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
   PRINT_SMS_ALL
   PRINT_STORED_DATA
 
-  ? -- PRINT_MEASURED_DATA
+  i, I -- PRINT_MEASURED_DATA
   # -- DEBUG_COMM
   */
 
@@ -91,9 +91,14 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-      request.commands_list |= DELETE_SMS;
+      request.commands_list |= DELETE_SMS_ALL;
+
       return SUCCESS;
   case 'C':
     switch (getSymbolIfAvailableAndNotSpace(serial)) {
@@ -108,12 +113,16 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
 
       request.commands_list |= SUCCESS;
       return SUCCESS;
-    case 'M':
-      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'G', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'F', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
-      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    case 'O':
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'N', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'F', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'G', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
       
       request.commands_list |= CMGF_EN;
@@ -138,6 +147,12 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
     request.commands_list |= GET_LAST_SMS_ID;
+    return SUCCESS;
+  case 'I':
+  case 'i':
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
+
+    request.commands_list |= PRINT_MEASURED_DATA;
     return SUCCESS;
   case 'S':
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
@@ -291,10 +306,25 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
       return SUCCESS;
     default: goto RETURN_ERROR;
     }
-  case '?':
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
+  case 'U':
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'P', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-    request.commands_list |= PRINT_MEASURED_DATA;
+    request.commands_list |= UPDATE_DATE_TIME;
     return SUCCESS;
   case '#':
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);

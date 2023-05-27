@@ -10,21 +10,23 @@
 using namespace return_codes;
 
 enum ERROM_IDS {
-  MAX_TEMPERATURE_ID  = 0,  // size = 4   type = float
-  MIN_TEMPERATURE_ID  = 4,  // size = 4   type = float
-  MAX_HUMIDITY_ID     = 8,  // size = 4   type = float
-  MIN_HUMIDITY_ID     = 12,  // size = 4   type = float
-  PHONE_NUMBER_ID     = 16  // size = 20  type = char[]
+  MAX_TEMPERATURE_ID      = 0,  // size = 4   type = float
+  MIN_TEMPERATURE_ID      = 4,  // size = 4   type = float
+  MAX_HUMIDITY_ID         = 8,  // size = 4   type = float
+  MIN_HUMIDITY_ID         = 12, // size = 4   type = float
+  PHONE_NUMBER_ID         = 16, // size = 20  type = char[]
 };
 
 struct StoredData {
-  char phone_number[20];
+  // public
   float min_temperature;
   float max_temperature;
   float min_humidity;
   float max_humidity;
 
-  return_code_t data_valid;
+  // private
+  char phone_number[20];
+  char system_update_period;
 };
 
 return_code_t EEPROM_putStr(int idx, const char* str) {
@@ -48,6 +50,16 @@ return_code_t EEPROM_getStr(int idx, char* str) {
   return SUCCESS;
 }
 
+void returnToDefaults() {
+  EEPROM_putStr(PHONE_NUMBER_ID, "00000000000");
+  EEPROM.put(MAX_TEMPERATURE_ID, 100.0f);
+  EEPROM.put(MIN_TEMPERATURE_ID, 0.0f);
+  EEPROM.put(MAX_HUMIDITY_ID, 100.0f);
+  EEPROM.put(MIN_HUMIDITY_ID, 0.0f);
+
+  return;
+}
+
 struct StoredData getStoredData() {
   struct StoredData data;
   EEPROM_getStr(PHONE_NUMBER_ID, data.phone_number);
@@ -55,8 +67,6 @@ struct StoredData getStoredData() {
   EEPROM.get(MIN_TEMPERATURE_ID, data.min_temperature);
   EEPROM.get(MAX_HUMIDITY_ID, data.max_humidity);
   EEPROM.get(MIN_HUMIDITY_ID, data.min_humidity);
-
-  data.data_valid = SUCCESS;
 
   return data;  
 }
@@ -107,7 +117,7 @@ return_code_t setMinHumidity(Stream& serial) {
   return setMinHumidity(serial.parseFloat());
 }
 
-printStoredDataTo(Stream& serial) {
+return_code_t printStoredDataTo(Stream& serial) {
   struct StoredData data;
   data = getStoredData();
 
@@ -125,6 +135,22 @@ printStoredDataTo(Stream& serial) {
   return SUCCESS;
 }
 
+return_code_t shortPrintStoredDataTo(Stream& serial) {
+  struct StoredData data;
+  data = getStoredData();
+
+  serial.print(F("Stored data\nMAX_TEMPERATURE: "));
+  serial.print(data.max_temperature);
+  serial.print(F(" C\nMIN_TEMPERATURE: "));
+  serial.print(data.min_temperature);
+  serial.print(F(" C\nMAX_HUMIDITY: "));
+  serial.print(data.max_humidity);
+  serial.print(F(" %\nMIN_HUMIDITY: "));
+  serial.print(data.min_humidity);
+  serial.println(F(" %"));
+  
+  return SUCCESS;
+}
 
 
 
