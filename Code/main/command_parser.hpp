@@ -70,6 +70,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
   PRINT_SMS
   PRINT_SMS_ALL
   PRINT_STORED_DATA
+  UPDATE_DATE_TIME
 
   i, I -- PRINT_MEASURED_DATA
   # -- DEBUG_COMM
@@ -133,21 +134,33 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
-    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-    request.commands_list |= GET_LAST_SMS_ID;
-    return SUCCESS;
+    switch(getSymbolIfAvailableAndNotSpace(serial)) {
+    case 'L':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+      request.commands_list |= GET_LAST_SMS_ID;
+      return SUCCESS;
+    case 'T':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+      request.commands_list |= GET_TIME;
+      return SUCCESS;
+    default: goto RETURN_ERROR;
+    }
   case 'I':
   case 'i':
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
@@ -256,8 +269,20 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
         IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
         request.commands_list |= SET_NUMBER;
-        scanPhoneNumber(serial, request.phone_number);
-        return SUCCESS;
+        return scanPhoneNumber(serial, request.phone_number);
+      case 'S':
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'N', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+        
+        request.commands_list |= SET_SEND_TIME;
+        return scanTime(request.date_time, serial);
       default: goto RETURN_ERROR;
       }
     default: goto RETURN_ERROR;

@@ -3,6 +3,7 @@
 #include <Stream.h>
 
 #include "commands_list.hpp"
+#include "date_time_struct.hpp"
 
 struct ParsRequest {
   long commands_list;
@@ -12,6 +13,7 @@ struct ParsRequest {
   float min_temperature;
   float min_humidity;
   int sms_number;
+  struct date_time date_time;
 };
 
 void printCommandsList(long commands_list, Stream& serial);

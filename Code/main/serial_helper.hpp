@@ -24,98 +24,83 @@ return_code_t getIntFromSerial(Stream& serial, int& result, char& last_char) {
   if (waitAvailable(serial) != SUCCESS) {
     return ERROR;
   }
-
-  int answer = -1;
-  int exp = 1;
+  
+  result = 0;
+  bool overflow = false;
 
   while (waitAvailable(serial) == SUCCESS) {
     last_char = serial.read();
     if (!isDigitSymbol(last_char)) {
       break;
     }
-    if (answer == -1) {
-      answer = 0;
-    } else if (answer < 0) {
+    if (overflow == true) {
       return ERROR;
     }
-    char digit = last_char - '0';
-    answer += (int)digit * exp;
-    exp *= 10;
+    
+    result *= 10;
+    
+    result += (last_char - '0');
+    if (result * 10 / 10 != result) {
+      overflow = true;
+    }
   }
 
-  if (answer == -1) {
-    return ERROR;
-  }
-  
-  result = reverseNumber(answer);
   return SUCCESS;
 }
 
 return_code_t getByteFromSerial(Stream& serial, char& result, char& last_char) {
   if (waitAvailable(serial) != SUCCESS) {
-    printError(F("getByteFromSerial: no input\n"));
     return ERROR;
   }
-
-  int answer = -1;
-  int exp = 1;
+  
+  result = 0;
+  bool overflow = false;
 
   while (waitAvailable(serial) == SUCCESS) {
     last_char = serial.read();
     if (!isDigitSymbol(last_char)) {
       break;
     }
-    if (answer == -1) {
-      answer = 0;
-    } else if (answer < 0) {
-      printError(F("getByteFromSerial: overflow\n"));
+    if (overflow == true) {
       return ERROR;
     }
-    char digit = last_char - '0';
-    answer += (int)digit * exp;
-    exp *= 10;
+    
+    result *= 10;
+    
+    result += (last_char - '0');
+    if (result * 10 / 10 != result) {
+      overflow = true;
+    }
   }
 
-  if (answer == -1) {
-    printError(F("getByteFromSerial: no number\n"));
-    return ERROR;
-  }
-  
-  result = reverseNumber(answer);
   return SUCCESS;
 }
 
 return_code_t getByteFromSerial(Stream& serial, char& result) {
   if (waitAvailable(serial) != SUCCESS) {
-    printError(F("getByteFromSerial: no input\n"));
-    return ERROR;
-  }
-
-  int answer = -1;
-  int exp = 1;
-
-  while (waitAvailable(serial) == SUCCESS) {
-    char digit = serial.read();
-    if (!isDigitSymbol(digit)) {
-      break;
-    }
-    if (answer == -1) {
-      answer = 0;
-    } else if (answer < 0) {
-      printError(F("getByteFromSerial: overflow\n"));
-      return ERROR;
-    }
-    digit -= '0';
-    answer += (int)digit * exp;
-    exp *= 10;
-  }
-
-  if (answer == -1) {
-    printError(F("getByteFromSerial: no number\n"));
     return ERROR;
   }
   
-  result = reverseNumber(answer);
+  result = 0;
+  bool overflow = false;
+
+  while (waitAvailable(serial) == SUCCESS) {
+    char last_char = serial.read();
+    if (!isDigitSymbol(last_char)) {
+      break;
+    }
+    if (overflow == true) {
+      return ERROR;
+    }
+    
+    result *= 10;
+    
+    result += (last_char - '0');
+    if (result * 10 / 10 != result) {
+      overflow = true;
+    }
+  }
+
   return SUCCESS;
 }
 

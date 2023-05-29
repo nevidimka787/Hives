@@ -18,7 +18,7 @@ long swapDigits(long x, long exp1, long exp2) {
   return x;
 }
 
-long reverseNumber(long n) {
+long reverseNumber(long n, uint8_t digits_count) {
   long reverse = 0;
   long remainder;
 

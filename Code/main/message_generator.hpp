@@ -8,7 +8,7 @@
 
 using namespace return_codes;
 
-return_code_t doRequestAsSIM800(struct ParsRequest& request);
+return_code_t doRequestAsSIM800(struct ParsRequest& request, struct system_info& global_system_info);
 
 return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
   char phone_number[20];
@@ -24,7 +24,7 @@ return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
   return checkSim800OK(10000);
 }
 
-return_code_t doRequestAsSerial(struct ParsRequest& request) {
+return_code_t doRequestAsSerial(struct ParsRequest& request, struct system_info& global_system_info) {
   long return_codes = 0;
   if (request.commands_list & DELETE_SMS_ALL) {
     printDebug(F("parsRequest: deleteSMSAll\n"));
@@ -43,6 +43,17 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
     if (Sim800Config() == SUCCESS) {
       return_codes |= CMGF_EN;
     }
+  }
+  if (request.commands_list & GET_TIME) {
+    printDebug(F("parsRequest: getCurrentTimeInSeconds\n"));
+
+    unsigned long time_in_sec;
+    if (getCurrentTimeInSeconds(time_in_sec) == SUCCESS) {
+      return_codes |= GET_TIME;
+    }
+    printDebug(F("parsRequest: Time: "));
+    printDebugInLine(time_in_sec);
+    printDebugInLine('\n');
   }
   if (request.commands_list & GET_LAST_SMS_ID) {
     printDebug(F("parsRequest: getLastSMSId\n"));
@@ -92,6 +103,13 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
       return_codes |= SET_MIN_HUMIDITY;
     }
   }
+  if (request.commands_list & SET_SEND_TIME) {
+    
+    printDebug(F("parsRequest: setSendTime\n"));
+    if (setSendTime(request.date_time, global_system_info) == SUCCESS) {
+      return_codes |= SET_SEND_TIME;
+    }
+  }
   if (request.commands_list & PRINT_SMS) {
     printDebug(F("parsRequest: printSMSToSerial\n"));
     if (printSMSToSerial(request.sms_number) == SUCCESS) {
@@ -130,7 +148,7 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
     struct ParsRequest request = {0};
     if (parsSMS(2, request, sim800) == SUCCESS) {
       printRequest(request, Serial);
-      doRequestAsSIM800(request);
+      doRequestAsSIM800(request, global_system_info);
       return_codes |= DEBUG_COMM;
     }
   }
@@ -144,7 +162,7 @@ return_code_t doRequestAsSerial(struct ParsRequest& request) {
   return ERROR;
 }
 
-return_code_t doRequestAsSIM800(struct ParsRequest& request) {
+return_code_t doRequestAsSIM800(struct ParsRequest& request, struct system_info& global_system_info) {
   long return_codes = 0;
 
   if (request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA)) {
@@ -182,6 +200,13 @@ return_code_t doRequestAsSIM800(struct ParsRequest& request) {
     printDebug(F("parsRequest: setMinHumidity\n"));
     if (setMinHumidity(request.min_humidity) == SUCCESS) {
       return_codes |= SET_MIN_HUMIDITY;
+    }
+  }
+  if (request.commands_list & SET_SEND_TIME) {
+    
+    printDebug(F("parsRequest: setSendTime\n"));
+    if (setSendTime(request.date_time, global_system_info) == SUCCESS) {
+      return_codes |= SET_SEND_TIME;
     }
   }
   if (request.commands_list & PRINT_STORED_DATA) {

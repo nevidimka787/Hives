@@ -11,6 +11,7 @@
 #include "serial_helper.hpp"
 #include "SMS_parser.hpp"
 #include "str_macroses.hpp"
+#include "system_info_struct.h"
 
 enum {
   NOTHING_DETECTED = 0,
@@ -218,6 +219,12 @@ return_code_t updateDateTime(struct date_time& date_time_i, Stream& data_source_
   }
 
   return ERROR;
+}
+
+return_code_t setSendTime(struct date_time& date_time, struct system_info& system_info) {
+  setSendTime(date_time);
+  system_info.set_send_time = true;
+  return SUCCESS;
 }
 
 
