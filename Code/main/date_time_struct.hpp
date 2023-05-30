@@ -3,7 +3,7 @@
 #include <Stream.h>
 
 #include "return_codes.hpp"
-#include "serial_helper.hpp"
+#include "print_debug.hpp"
 
 namespace date_time {
   enum MONTS {
@@ -31,10 +31,88 @@ namespace date_time {
   };
 }
 
-
 using namespace return_codes;
 using namespace date_time;
 
+// compare dates
+// @param date_1 - first date
+// @patam date_2 - second date
+// @return 1 if date_1 newer then date_2, 0 if date are same, -1 if date_2 newer then date_1
+int8_t compareDate(const struct date_time& date_1, const struct date_time& date_2);
+
+// compare dates include times
+// @param date_1 - first date and time
+// @patam date_2 - second date and time
+// @return 1 if date_1 newer then date_2, 0 if date are same, -1 if date_2 newer then date_1
+int8_t compareDateTime(const struct date_time& date_1, const struct date_time& date_2);
+
+// compare dates
+// @param date_1 - first time
+// @patam date_2 - second time
+// @return 1 if date_1 newer then date_2, 0 if date are same, -1 if date_2 newer then date_1
+int8_t compareTime(const struct date_time& date_1, const struct date_time& date_2);
+
+// @param time_in_sec - current time in second (0 is 00:00:00) will be writed to here
+// @return always SUCCESS;
+return_code_t getCurrentTimeInSeconds(unsigned long& time_in_sec);
+
+// get seconds to the next date time update
+// @param current_date_time - current date and time
+// @return count of secconds to the next update
+unsigned long getDateTimeUpdateDelay(const struct date_time& current_date_time);
+
+// get days from date_2 to date_1
+// @param date_1 - end date
+// @param date_2 - begin date
+// @return days count from date_2 to date_1 (from 23/01/01 to 23/01/02 is one day)
+unsigned long getDaysBetweenDates(const struct date_time& date_1, const struct date_time& date_2);
+
+// get days from year2 to year1
+// @param year1 - end year
+// @param year2 - begin year
+// @return days count from year2 to year1 
+int getDaysBetweenYears(uint8_t year1, uint8_t year2);
+
+// get days in month
+// @param date - store month and year
+// return days count
+int8_t getDaysInCurrentMonth(const struct date_time& date);
+
+// get days to the nex year
+// @param date - begin date
+// @param days count
+int getDaysToNextYear(const struct date_time& date);
+
+// add a day to date
+// @param date - changed date
+// @return ERROR if date is incorrect, else SUCCESS
+return_code_t setNextDay(struct date_time& date);
+
+// get seconds from date_2 to date_1
+// @param date_1 - end date
+// @param date_2 - begin date
+// @return count of seconds 
+unsigned long getSecondsBetweenDates(const struct date_time& date_1, const struct date_time& date_2);
+
+// get seconds to the next day
+// @param time - begin time
+// @return count of seconds
+unsigned long getSecondsToNextDay(const struct date_time& time);
+
+// convert time to seconds
+// @param time - input time
+// @return time in seconds
+unsigned long getTimeInSecconds(const struct date_time& time);
+
+// @param year - number of year
+// @return true if year is leap, else false
+bool isLeapYear(uint8_t year);
+
+// print date and time to serial
+// format yy/mm/dd,hh:mm:ss
+// @param date_time_i - date and time
+// @param serial - output stream
+void printDateTime(struct date_time& date_time_i, Stream& serial);
 
 struct date_time global_date_time; // defined in date_time_struct.hpp
 
@@ -101,70 +179,11 @@ int8_t getDaysInCurrentMonth(const struct date_time& date) {
   return days_in_months[date.month - 1];
 }
 
-return_code_t scanDate(struct date_time& date_time_i, Stream& serial) {
-  if (getByteFromSerial(serial, date_time_i.year) != SUCCESS) {
-    return ERROR;
-  }
-  if (getByteFromSerial(serial, date_time_i.month) != SUCCESS) {
-    return ERROR;
-  }
-  return getByteFromSerial(serial, date_time_i.day);
-}
-
-return_code_t scanTime(struct date_time& date_time_i, Stream& serial) {
-  if (getByteFromSerial(serial, date_time_i.hour) != SUCCESS) {
-    return ERROR;
-  }
-  if (getByteFromSerial(serial, date_time_i.minute) != SUCCESS) {
-    return ERROR;
-  }
-  return getByteFromSerial(serial, date_time_i.second);
-}
-
-return_code_t scanDate(struct date_time& date_time_i, Stream& serial, char& last_char) {
-  if (getByteFromSerial(serial, date_time_i.year) != SUCCESS) {
-    return ERROR;
-  }
-  if (getByteFromSerial(serial, date_time_i.month) != SUCCESS) {
-    return ERROR;
-  }
-  return getByteFromSerial(serial, date_time_i.day, last_char);
-}
-
-return_code_t scanTime(struct date_time& date_time_i, Stream& serial, char& last_char) {
-  if (getByteFromSerial(serial, date_time_i.hour) != SUCCESS) {
-    return ERROR;
-  }
-  if (getByteFromSerial(serial, date_time_i.minute) != SUCCESS) {
-    return ERROR;
-  }
-  return getByteFromSerial(serial, date_time_i.second, last_char);
-}
-
-return_code_t scanDateTime(struct date_time& date_time_i, Stream& serial) {
-  if (scanDate(date_time_i, serial) != SUCCESS) {
-    return ERROR;
-  }
-  return scanTime(date_time_i, serial);
-}
-
-return_code_t scanDateTime(struct date_time& date_time_i, Stream& serial, char& last_char) {
-  if (scanDate(date_time_i, serial) != SUCCESS) {
-    return ERROR;
-  }
-  return scanTime(date_time_i, serial, last_char);
-}
-
 /*
 return delay in miliseconds
 */
-unsigned long getdateTimeUpdateDelay(const struct date_time& current_date_time) {
+unsigned long getDateTimeUpdateDelay(const struct date_time& current_date_time) {
   return ((3600L * 24L + 3600L - (unsigned long)current_date_time.hour * 3600L - (unsigned long)current_date_time.minute * 60L - (unsigned long)current_date_time.second) % (3600L * 24L)) * 1000L;
-}
-
-unsigned long getEventDelay(const struct date_time& event_date_time, const struct date_time& current_date_time) {
-  (3600L * 24L + (unsigned long)event_date_time.hour * 3600L + (unsigned long)event_date_time.minute * 60L + (unsigned long)event_date_time.second -
-  (unsigned long)current_date_time.hour * 3600L - (unsigned long)current_date_time.minute * 60L - (unsigned long)current_date_time.second) % (3600L * 24L) * 1000L;
 }
 
 int getDaysToNextYear(const struct date_time& date) {
@@ -184,9 +203,6 @@ int getDaysToNextYear(const struct date_time& date) {
   return days_until_next_year;
 }
 
-/*
-@return -1 if date_1 < date_2, 0 if date_1 == date_2, 1 if date_1 > date_2
-*/
 int8_t compareDate(const struct date_time& date_1, const struct date_time& date_2) {
   if (date_1.year > date_2.year) { return 1; }
   if (date_1.year < date_2.year) { return -1; }
@@ -198,9 +214,6 @@ int8_t compareDate(const struct date_time& date_1, const struct date_time& date_
   return 0;
 }
 
-/*
-@return -1 if date_1 < date_2, 0 if date_1 == date_2, 1 if date_1 > date_2
-*/
 int8_t compareTime(const struct date_time& date_1, const struct date_time& date_2) {
   if (date_1.hour > date_2.hour) { return 1; }
   if (date_1.hour < date_2.hour) { return -1; }
@@ -212,9 +225,6 @@ int8_t compareTime(const struct date_time& date_1, const struct date_time& date_
   return 0;
 }
 
-/*
-@return -1 if date_1 < date_2, 0 if date_1 == date_2, 1 if date_1 > date_2
-*/
 int8_t compareDateTime(const struct date_time& date_1, const struct date_time& date_2) {
   int8_t result = compareDate(date_1, date_2);
   if (result == 0) {
@@ -231,7 +241,6 @@ unsigned long getTimeInSecconds(const struct date_time& date) {
   return 3600UL * date.hour + 60UL * date.minute + date.second;
 }
 
-//y1 >= y2
 int getDaysBetweenYears(uint8_t year1, uint8_t year2) {
   int days = 0;
 
@@ -242,16 +251,14 @@ int getDaysBetweenYears(uint8_t year1, uint8_t year2) {
   return days;
 }
 
-// date1 >= date2
-unsigned long getDaysBeetweenDates(const struct date_time& date_1, const struct date_time& date_2) {
+unsigned long getDaysBetweenDates(const struct date_time& date_1, const struct date_time& date_2) {
   unsigned long days_diff = getDaysToNextYear(date_1) - getDaysToNextYear(date_2);
   days_diff += getDaysBetweenYears(date_1.year, date_2.year);
   return days_diff;  
 }
 
-// date1 >= date2
-unsigned long getSecondsBeetweenDates(const struct date_time& date_1, const struct date_time& date_2) {
-  unsigned long diff = getDaysBeetweenDates(date_1, date_2);
+unsigned long getSecondsBetweenDates(const struct date_time& date_1, const struct date_time& date_2) {
+  unsigned long diff = getDaysBetweenDates(date_1, date_2);
   diff *= 3600L * 24L;
   diff += ((long)date_1.hour - date_2.hour) * 3600L + ((int)date_1.minute - date_2.minute) * 60 + (int)date_1.second - date_2.second;
   return diff;

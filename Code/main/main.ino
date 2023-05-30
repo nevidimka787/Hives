@@ -43,6 +43,7 @@ SoftwareSerial sim800(SIM800_TX, SIM800_RX);
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
 
+// the variable store counter value that was writed in global time update event
 unsigned long date_time_last_update_time_point;
 #include "date_time_struct.hpp"
 #include "system_main.hpp"
@@ -59,13 +60,41 @@ unsigned long date_time_last_update_time_point;
 #include "return_codes.hpp"
 #include "serial_helper.hpp"
 
+// system_main_action execution time
 // only millis
 unsigned long system_update_time_point;
 unsigned long system_update_period = 60000; // 60 seconds
+// update global date time execution time
 unsigned long date_time_update_time_point;
-unsigned long date_time_update_delay;
 
 struct system_info global_system_info = {0};
+
+// execute infinity blink
+void fatalError();
+
+// update date and time
+// get send_time fro eeprom
+void systemSetup(struct system_info& result_system_info);
+
+// wait input from sim800, then execute system main action
+void eventsFromSIM800(struct system_info& result_system_info);
+
+// parst data from serial to list of commands and arduments for the commands
+// execute commands from list
+// check result of execution
+void eventsFromSerial(struct system_info& result_system_info);
+
+// execute system main action every 60 seconds
+// execute system fix action if it is required
+// send measured date if it is requited
+// update global time if it is required
+void eventsFromSystem(struct system_info& result_system_info);
+
+// basic arduino setup function
+void setup();
+
+// basic arduino loop function
+void loop();
 
 void fatalError() {
   printError("FATAL ERROR\n");
@@ -185,7 +214,7 @@ void setup() {
 
   printDebug(F("setup: Begin\n"));
 
-  return_code_t return_code = init(10); // one attemp arout 10 seconds -> 100 seconds until timeout
+  return_code_t return_code = initSim800(10); // one attemp arout 10 seconds -> 100 seconds until timeout
   
   dht.begin();
 

@@ -22,6 +22,40 @@ using namespace return_codes;
 char last_char;
 #endif
 
+// if input available return symblo else return -1
+// @param serial - input
+// @return symbol if one available else -1
+int getSymbolIfAvailable(Stream& serial);
+
+// if input symbol available and if one not a space symbol return symblo else return -1
+// @param serial - input
+// @return symbol if one available and if one not a space symbol else -1
+int getSymbolIfAvailableAndNotSpace(Stream& serial);
+
+// pars a command and its parameters from serial and write it to request
+// commands list:
+//
+// DELETE_SMS
+// CHECK_OK
+// CMGF_EN
+// GET_LAST_SMS_ID
+// SEND_SMS
+// SET_NUMBER
+// SET_MAX_TEMPERATURE
+// SET_MAX_HUMIDITY
+// SET_MIN_TEMPERATURE
+// SET_MIN_TEMPERATURE
+// PRINT_SMS
+// PRINT_SMS_ALL
+// PRINT_STORED_DATA
+// UPDATE_DATE_TIME
+// i, I -- PRINT_MEASURED_DATA
+// # -- DEBUG_COMM
+//
+// @param serial - input stream
+// @param requet - commands will be writed to here
+return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request);
+
 int getSymbolIfAvailable(Stream& serial) {
   if (serial.available()) {
 #ifdef getSymbolIfAvailableAndNotSpace_BEGUG

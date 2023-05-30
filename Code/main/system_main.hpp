@@ -1,15 +1,35 @@
 #pragma once
 
+#include "events_manager.hpp"
 #include "message_generator.hpp"
 #include "return_codes.hpp"
 #include "system_info_struct.h"
 
 using namespace return_codes;
 
-return_code_t systemUpdateSendTime(struct system_info& result_system_info);
+// get last SMS from sim800
+// execute commands from SMS as user
+// @param result_system_info - system information
+// @return SUCCESS if some comands was executed, NO_REQUEST if nothing was executed, ERROR if parsing or exeqution failure
 return_code_t systemDoSMS(struct system_info& result_system_info);
 
-return_code_t system_main_action(struct system_info& global_system_info) {
+// try to fix system errors
+// reconfigure sim800
+// @return SUCCESS if fix was successfully
+return_code_t systemFixAction();
+
+// execute SMS if available
+// update send time if available
+// @param global_system_info - system information
+// @return ERROR if SMS execution or time update failure, else SUCCESS
+return_code_t systemMainAction(struct system_info& global_system_info);
+
+// update time of send SMS
+// @param result_system_info - system information
+// @return always SUCCESS
+return_code_t systemUpdateSendTime(struct system_info& result_system_info);
+
+return_code_t systemMainAction(struct system_info& global_system_info) {
   return_code_t result = SUCCESS;
   
   result = systemDoSMS(global_system_info);
@@ -26,7 +46,7 @@ return_code_t system_main_action(struct system_info& global_system_info) {
   return result;
 }
 
-return_code_t system_fix_action() {
+return_code_t systemFixAction() {
   return Sim800Config();
 }
 
@@ -41,6 +61,10 @@ return_code_t systemUpdateSendTime(struct system_info& result_system_info) {
     printDebugInLine("true\n");
   } else {
     printDebugInLine("false\n");
+  }
+
+  while (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
+    setNextDay(result_system_info.send_measured_data_time);
   }
 
   return SUCCESS;
@@ -72,6 +96,17 @@ return_code_t systemDoSMS(struct system_info& result_system_info) {
 
   return SUCCESS;
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 

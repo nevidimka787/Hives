@@ -8,23 +8,25 @@
 
 using namespace return_codes;
 
-return_code_t doRequestAsSIM800(struct ParsRequest& request, struct system_info& global_system_info);
+// get request
+// execute all commands
+// @param request - input request
+// @param global_system_info - system information (can be changed)
+// return SUCCES if all commands was executed successfully or was no commands in request, NOT_ABSOLUTE_SUCCESS if some commands was exacuted successfully, ERROR if nothing was executed SUCCESSFULLY
+return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system_info& global_system_info);
 
-return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
-  char phone_number[20];
-  getPhoneNumber(phone_number);
-  to_serial.print(F("AT+CMGS=\"+"));
-  to_serial.print(phone_number);
-  to_serial.println(F("\""));
-  
-  waitAvailable(to_serial);
-  to_serial.println(F("Default message from SIM800.\n"));
-  to_serial.write((char)26);
+// get request
+// execute commands that available for users
+// skip other commands
+// @param request - input request
+// @param global_system_info - system information (can be changed)
+// return SUCCES if all commands for users was executed successfully or was no commands for users in request, NOT_ABSOLUTE_SUCCESS if some commands for users was exacuted successfully, ERROR if nothing was executed SUCCESSFULLY
+return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system_info& global_system_info);
 
-  return checkSim800OK(10000);
-}
+// sen default hardcoded SMS to seted phone number
+return_code_t sendDefaultSMS(Stream& to_serial = sim800);
 
-return_code_t doRequestAsSerial(struct ParsRequest& request, struct system_info& global_system_info) {
+return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system_info& global_system_info) {
   long return_codes = 0;
   if (request.commands_list & DELETE_SMS_ALL) {
     printDebug(F("parsRequest: deleteSMSAll\n"));
@@ -162,7 +164,7 @@ return_code_t doRequestAsSerial(struct ParsRequest& request, struct system_info&
   return ERROR;
 }
 
-return_code_t doRequestAsSIM800(struct ParsRequest& request, struct system_info& global_system_info) {
+return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system_info& global_system_info) {
   long return_codes = 0;
 
   if (request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA)) {
@@ -244,4 +246,18 @@ return_code_t doRequestAsSIM800(struct ParsRequest& request, struct system_info&
     return NOT_ABSOLUTE_SUCCESS;
   }
   return ERROR;
+}
+
+return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
+  char phone_number[20];
+  getPhoneNumber(phone_number);
+  to_serial.print(F("AT+CMGS=\"+"));
+  to_serial.print(phone_number);
+  to_serial.println(F("\""));
+  
+  waitAvailable(to_serial);
+  to_serial.println(F("Default message from SIM800.\n"));
+  to_serial.write((char)26);
+
+  return checkSim800OK(10000);
 }
