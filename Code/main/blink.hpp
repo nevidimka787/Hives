@@ -1,5 +1,12 @@
 #pragma once
 
+// infinite blink 2 times per second
+void blinkAndWait_2 ();
+// infinite blink 4 times per second
+void blinkAndWait_4 ();
+// infinite blink 5 times in second and wait one second
+void blinkAndWait_alarm ();
+
 void blinkAndWait_4 () {
   delay(250);
   digitalWrite(13, HIGH);

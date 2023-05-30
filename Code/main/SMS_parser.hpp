@@ -3,12 +3,33 @@
 #include "command_parser.hpp"
 #include "date_time_struct.hpp"
 #include "print_debug.hpp"
+#include "return_codes.hpp"
 #include "serial_helper.hpp"
 #include "str_macroses.hpp"
 
-/*
-@return number of SMS or 0
-*/
+using namespace return_codes;
+
+// search last SMS that was sended by selected phone number
+// @param serial input_stream
+// @return number of SMS or 0 if SMS not found
+int getNewestSMSFromNumberUntilOK(Stream& serial);
+
+// pars SMS from serial to list of commands and arguments
+// send response to serial
+// pars reques from serial
+// @param sms_number - number of sms for parsing
+// @param request - list of commands and arguments will be write to this argument
+// @param sim800_serial - input serial that supports AT commands
+// @return ERROR if no input else SUCCESS
+return_code_t parsSMS(int sms_number, struct ParsRequest& request, Stream& sim800_serial = sim800);
+
+// pars output from serial to list of commands and arguments
+// @param request - list of commands and arguments will be write to this argument
+// @param sim800_serial - input serial that supports AT commands
+// @return ERROR if no input else SUCCESS
+return_code_t parsSMSUntilOk(struct ParsRequest& request, Stream& sim800_serial = sim800);
+
+
 int getNewestSMSFromNumberUntilOK(Stream& serial) {
   struct date_time max_date_time = {
     .year   = 0,

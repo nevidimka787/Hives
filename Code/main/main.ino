@@ -43,30 +43,58 @@ SoftwareSerial sim800(SIM800_TX, SIM800_RX);
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
 
+// the variable store counter value that was writed in global time update event
+unsigned long date_time_last_update_time_point;
+#include "date_time_struct.hpp"
+#include "system_main.hpp"
+
 // *** OPERATION SYSTEM ***
 
 #include "blink.hpp"
 #include "command_parser.hpp"
+#include "events_manager.hpp"
 #include "init.hpp"
 #include "message_generator.hpp"
 #include "print_debug.hpp"
 #include "pars_request_struct.hpp"
 #include "return_codes.hpp"
 #include "serial_helper.hpp"
-#include "system_main.hpp"
 
+// system_main_action execution time
 // only millis
 unsigned long system_update_time_point;
 unsigned long system_update_period = 60000; // 60 seconds
+// update global date time execution time
 unsigned long date_time_update_time_point;
-unsigned long date_time_update_delay;
-
-struct date_time global_date_time;
 
 struct system_info global_system_info = {0};
 
-return_code_t serial_result;
-return_code_t sim800_result;
+// execute infinity blink
+void fatalError();
+
+// update date and time
+// get send_time fro eeprom
+void systemSetup(struct system_info& result_system_info);
+
+// wait input from sim800, then execute system main action
+void eventsFromSIM800(struct system_info& result_system_info);
+
+// parst data from serial to list of commands and arduments for the commands
+// execute commands from list
+// check result of execution
+void eventsFromSerial(struct system_info& result_system_info);
+
+// execute system main action every 60 seconds
+// execute system fix action if it is required
+// send measured date if it is requited
+// update global time if it is required
+void eventsFromSystem(struct system_info& result_system_info);
+
+// basic arduino setup function
+void setup();
+
+// basic arduino loop function
+void loop();
 
 void fatalError() {
   printError("FATAL ERROR\n");
@@ -77,6 +105,107 @@ void fatalError() {
   }
 }
 
+void systemSetup(struct system_info& result_system_info) {
+  result_system_info.sim800_result = updateDateTime(global_date_time, sim800);
+  if (result_system_info.sim800_result == SUCCESS) {
+    // update at 0:00 am
+    date_time_last_update_time_point = millis();
+    date_time_update_time_point = date_time_last_update_time_point + getSecondsToNextDay(global_date_time) * 1000LU;
+  } else {
+    // try update after one minute
+    date_time_update_time_point = millis() + 60000LU;
+  }
+
+  systemUpdateSendTime(result_system_info);
+
+  system_update_time_point = millis();
+}
+
+void eventsFromSIM800(struct system_info& result_system_info) {
+  if (sim800.available()) {
+    printDebug(F("eventsFromSIM800: unparsed data begin\n"));
+    while (sim800.available()) {
+      char val = sim800.read();
+#ifdef SERIAL_DEBUG
+      Serial.write(val);
+#endif // SERIAL_DEBUG
+    }
+    printDebug(F("eventsFromSIM800: unparsed data end\n"));
+
+    printDebug(F("eventsFromSIM800: Event by sim800 response.\n"));
+
+    system_update_time_point = millis();
+    result_system_info.sim800_result = system_main_action(global_system_info);
+  }
+}
+
+void eventsFromSerial(struct system_info& result_system_info) {
+  struct ParsRequest request = {0};
+  result_system_info.serial_result = parsRequestFrom(Serial, request);
+  if (result_system_info.serial_result == SUCCESS) {
+    printRequest(request, Serial);
+    result_system_info.serial_result = doRequestAsSerial(request, global_system_info);
+  }
+
+  switch (result_system_info.serial_result) {
+  case SUCCESS:
+    printDebug(F("eventsFromSerial: SUCCESS\n"));
+    break;
+  case ERROR:
+    printDebug(F("eventsFromSerial: ERROR\n"));
+    break;
+  case NO_REQUEST:
+    blinkAndWait_2();
+    break;
+  default:
+    printDebug(F("eventsFromSerial: unrecognise response "));
+    printDebugInLine(result_system_info.serial_result);
+    printDebugInLine('\t');
+    printDebugInLine(SUCCESS);
+    printDebugInLine('\n');
+
+    blinkAndWait_4();
+    break;
+  }
+}
+
+void eventsFromSystem(struct system_info& result_system_info) {
+  if (eventAvailable(system_update_time_point) == SUCCESS) {
+    system_update_time_point = millis() + system_update_period;
+    printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
+    result_system_info.sim800_result = system_main_action(global_system_info);
+  }
+
+  if (result_system_info.sim800_result == ERROR) {
+    result_system_info.sim800_result = system_fix_action();
+  }
+
+  if (result_system_info.send_measured_data && eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
+    setNextDay(result_system_info.send_measured_data_time);
+    struct ParsRequest request = {0};
+    
+    printDebug(F("eventsFromSystem: do PRINT_MEASURED_DATA\ndate_time: "));
+    printDateTime(result_system_info.send_measured_data_time, Serial);
+    
+    request.commands_list |= PRINT_MEASURED_DATA;
+    result_system_info.sim800_result = doRequestAsSIM800(request, global_system_info);
+  }
+
+  if (eventAvailable(date_time_update_time_point, 3600LU * 24 * 4 * 1000) == SUCCESS) {
+    result_system_info.sim800_result = updateDateTime(global_date_time, sim800);
+    if (result_system_info.sim800_result == SUCCESS) {
+      // update at 0:00 am
+      date_time_last_update_time_point = millis(); // must be for getCurrentTimeInSeconds
+      date_time_update_time_point = date_time_last_update_time_point + getSecondsToNextDay(global_date_time) * 1000LU;
+    } else {
+      // try update after one minute
+      date_time_update_time_point = millis() + 60000LU;
+    }
+  }
+
+  return;
+}
+
 void setup() {
 #ifdef SERIAL_DEBUG
   Serial.begin(115200);
@@ -85,10 +214,7 @@ void setup() {
 
   printDebug(F("setup: Begin\n"));
 
-  return_code_t return_code = init(
-    10,
-    global_date_time,
-    date_time_update_delay); // one attemp arout 10 seconds -> 100 seconds until timeout
+  return_code_t return_code = initSim800(10); // one attemp arout 10 seconds -> 100 seconds until timeout
   
   dht.begin();
 
@@ -102,77 +228,15 @@ void setup() {
     // fatalError();
   }
 
-  printDebug(F("setup: End\n"));
+  systemSetup(global_system_info);
 
-  system_update_time_point = millis();
-  date_time_update_time_point = millis();
+  printDebug(F("setup: End\n"));
 }
 
 void loop() {
-  struct ParsRequest request = {0};
-  if (sim800.available()) {
-    printDebug(F("main: unparsed data begin\n"));
-    while (sim800.available()) {
-      char val = sim800.read();
-#ifdef SERIAL_DEBUG
-      Serial.write(val);
-#endif // SERIAL_DEBUG
-    }
-    printDebug(F("main: unparsed data end\n"));
-
-    printDebug(F("main: Event by sim800 response.\n"));
-
-    system_update_time_point = millis();
-    sim800_result = system_main_action(global_system_info);
-  }
-
-  return_code_t serial_result = parsRequestFrom(Serial, request);
-  if (serial_result == SUCCESS) {
-    printRequest(request, Serial);
-    serial_result = doRequestAsSerial(request);
-  }
-
-  switch (serial_result) {
-  case SUCCESS:
-    printDebug(F("main: SUCCESS\n"));
-    break;
-  case ERROR:
-    printDebug(F("main: ERROR\n"));
-    break;
-  case NO_REQUEST:
-    blinkAndWait_2();
-    break;
-  default:
-    printDebug(F("main: unrecognise response "));
-    printDebugInLine(serial_result);
-    printDebugInLine('\t');
-    printDebugInLine(SUCCESS);
-    printDebugInLine('\n');
-
-    blinkAndWait_4();
-    break;
-  }
-
-  if (millis() - system_update_time_point >= system_update_period) {
-    system_update_time_point = millis();
-
-    printDebug(F("main: Every 60 seconds event.\n"));
-    
-    sim800_result = system_main_action(global_system_info);
-  }
-
-  if (sim800_result == ERROR) {
-    sim800_result = system_fix_action();
-  }
-
-  if (millis() - date_time_update_time_point >= date_time_update_delay) {
-    sim800_result = updateDateTime(global_date_time, sim800);
-    if (sim800_result == SUCCESS) {
-      // update at 1:00 am
-      date_time_update_delay = getdateTimeUpdateDelay(global_date_time);
-      date_time_update_time_point = millis();
-    }
-  }
+  eventsFromSIM800(global_system_info);
+  eventsFromSerial(global_system_info);
+  eventsFromSystem(global_system_info);
 }
 
 
