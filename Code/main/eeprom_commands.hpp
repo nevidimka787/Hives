@@ -15,7 +15,9 @@ enum ERROM_IDS {
   MAX_HUMIDITY_ID         = 8,  // size = 4   type = float
   MIN_HUMIDITY_ID         = 12, // size = 4   type = float
   PHONE_NUMBER_ID         = 16, // size = 20  type = char[]
-  SEND_TIME_ID            = 36  // size = 3   type = char[]
+  SEND_TIME_ID            = 36, // size = 3   type = char[]
+  MAX_WEIGHT_ID           = 39, // size = 4   type = float
+  MIN_WEIGHT_ID           = 43  // size = 4   type = float
 };
 
 struct StoredData {
@@ -24,6 +26,8 @@ struct StoredData {
   float max_temperature;
   float min_humidity;
   float max_humidity;
+  float max_weight;
+  float min_weight;  
   char send_time[3]; // hh:mm:ss
 
   // private
@@ -87,37 +91,25 @@ return_code_t setPhoneNumber(const char phone_number[20]);
 // @return always SUCCESS
 return_code_t setMaxTemperature(float temperature);
 
-// get values from serial
-// @param serial - input stream
-// @return always SUCCESS
-return_code_t setMaxTemperature(Stream& serial);
-
 // @param temperature - minimum temperature
 // @return always SUCCESS
 return_code_t setMinTemperature(float temperature);
-
-// get values from serial
-// @param serial - input stream
-// @return always SUCCESS
-return_code_t setMinTemperature(Stream& serial);
 
 // @param humidity - maximun humidity
 // @return always SUCCESS
 return_code_t setMaxHumidity(float humidity);
 
-// get values from serial
-// @param serial - input stream
-// @return always SUCCESS
-return_code_t setMaxHumidity(Stream& serial);
-
 // @param humidity - minimum humidity
 // @return always SUCCESS
 return_code_t setMinHumidity(float humidity);
 
-// get values from serial
-// @param serial - input stream
+// @param weight - maximun weight
 // @return always SUCCESS
-return_code_t setMinHumidity(Stream& serial);
+return_code_t setMaxWeight(float weight);
+
+// @param weight - minimum weight
+// @return always SUCCESS
+return_code_t setMinWeight(float weight);
 
 // @param date_time - time in which enviroment date will be sended
 // @return always SUCCESS
@@ -184,6 +176,8 @@ struct StoredData getStoredData() {
   EEPROM.get(MIN_TEMPERATURE_ID, data.min_temperature);
   EEPROM.get(MAX_HUMIDITY_ID, data.max_humidity);
   EEPROM.get(MIN_HUMIDITY_ID, data.min_humidity);
+  EEPROM.get(MAX_WEIGHT_ID, data.max_weight);
+  EEPROM.get(MIN_WEIGHT_ID, data.min_weight);
   EEPROM_getStr(SEND_TIME_ID, data.send_time, 3);
 
   return data;  
@@ -204,17 +198,9 @@ return_code_t setMaxTemperature(float temperature) {
   return SUCCESS;
 }
 
-return_code_t setMaxTemperature(Stream& serial) {
-  return setMaxTemperature(serial.parseFloat());
-}
-
 return_code_t setMinTemperature(float temperature) {
   EEPROM.put(MIN_TEMPERATURE_ID, temperature);
   return SUCCESS;
-}
-
-return_code_t setMinTemperature(Stream& serial) {
-  return setMinTemperature(serial.parseFloat());
 }
 
 return_code_t setMaxHumidity(float humidity) {
@@ -222,17 +208,19 @@ return_code_t setMaxHumidity(float humidity) {
   return SUCCESS;
 }
 
-return_code_t setMaxHumidity(Stream& serial) {
-  return setMaxHumidity(serial.parseFloat());
-}
-
 return_code_t setMinHumidity(float humidity) {
   EEPROM.put(MIN_HUMIDITY_ID, humidity);
   return SUCCESS;
 }
 
-return_code_t setMinHumidity(Stream& serial) {
-  return setMinHumidity(serial.parseFloat());
+return_code_t setMaxWeight(float weight) {
+  EEPROM.put(MAX_WEIGHT_ID, weight);
+  return SUCCESS;
+}
+
+return_code_t setMinWeight(float weight) {
+  EEPROM.put(MIN_WEIGHT_ID, weight);
+  return SUCCESS;
 }
 
 return_code_t setSendTime(const struct date_time& date_time) {
@@ -263,6 +251,10 @@ return_code_t printStoredDataTo(Stream& serial) {
   serial.println(data.max_humidity);
   serial.print(F("printStoredDataTo: humidity min: "));
   serial.println(data.min_humidity);
+  serial.print(F("printStoredDataTo: weight max: "));
+  serial.println(data.max_weight);
+  serial.print(F("printStoredDataTo: weight min: "));
+  serial.println(data.min_weight);
   serial.print(F("printStoredDataTo: send_time: "));
   if (data.send_time[0] >= 24) {
     serial.print(F("not send enviromental data\n"));
@@ -298,7 +290,11 @@ return_code_t shortPrintStoredDataTo(Stream& serial) {
   serial.print(data.max_humidity);
   serial.print(F(" %\nMIN_HUMIDITY: "));
   serial.print(data.min_humidity);
-  serial.print(F(" %\nSEND_TIME: "));
+  serial.print(F(" %\nMAX_WEIGHT: "));
+  serial.print(data.max_weight);
+  serial.print(F(" <no units>\nMIN_WEIGHT: "));
+  serial.print(data.min_weight);
+  serial.print(F(" <no units>\nSEND_TIME: "));
   if (data.send_time[0] >= 24) {
     serial.print(F("not send enviromental data\n"));
   } else {

@@ -13,13 +13,14 @@
 return_code_t initSim800();
 
 return_code_t initSim800(int connecting_attemps_count) {
-  if (connecting_attemps_count > 0) {
-    for (; connecting_attemps_count > 0; --connecting_attemps_count) {
+  int attemp = connecting_attemps_count;
+  if (attemp > 0) {
+    for (; attemp > 0; --attemp) {
       if (Sim800Check(1000) == SUCCESS) {
         break;
       }
     }
-    if (connecting_attemps_count <= 0) {
+    if (attemp <= 0) {
       printError(F("init: SIM800 connecting timeout\n"));
       return ERROR;
     }
@@ -28,8 +29,19 @@ return_code_t initSim800(int connecting_attemps_count) {
   } 
   printDebug(F("init: SIM800 connecting success\n"));
 
-  return Sim800Config();
+  attemp = connecting_attemps_count;
+  while (attemp > 0) {
+    --attemp;
+    if (Sim800Config(1000) == SUCCESS) {
+      printDebug(F("init: SIM800 configure success\n"));
+      return SUCCESS;
+    }
+  }
+
+  printError(F("init: SIM800 configure timeout\n"));
+  return ERROR;
 }
+
 
 
 

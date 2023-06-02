@@ -10,12 +10,13 @@ struct ParsRequest {
   char phone_number[20];
   float max_temperature;
   float max_humidity;
+  float max_weight;
   float min_temperature;
   float min_humidity;
+  float min_weight;
   int sms_number;
   struct date_time date_time;
 };
-
 
 #ifdef SERIAL_DEBUG
 
@@ -38,10 +39,14 @@ void printRequest(struct ParsRequest& request, Stream& serial = Serial) {
   serial.print(request.max_temperature);
   serial.print(F("\nmax_humidity: "));
   serial.print(request.max_humidity);
+  serial.print(F("\nmax_weight: "));
+  serial.print(request.max_weight);
   serial.print(F("\nmin_temperature: "));
   serial.print(request.min_temperature);
   serial.print(F("\nmin_humidity: "));
   serial.print(request.min_humidity);
+  serial.print(F("\nmin_weight: "));
+  serial.print(request.min_weight);
   serial.print(F("\nsms_number: "));
   serial.println(request.sms_number);
 
@@ -80,11 +85,17 @@ void printCommandsList(long commands_list, Stream& serial) {
   if (commands_list & SET_MAX_HUMIDITY) {
     serial.print(F("\nSET_MAX_HUMIDITY"));
   }
+  if (commands_list & SET_MAX_WEIGHT) {
+    serial.print(F("\nSET_MAX_WEIGHT"));
+  }
   if (commands_list & SET_MIN_TEMPERATURE) {
     serial.print(F("\nSET_MIN_TEMPERATURE"));
   }
   if (commands_list & SET_MIN_HUMIDITY) {
     serial.print(F("\nSET_MIN_HUMIDITY"));
+  }
+  if (commands_list & SET_MIN_WEIGHT) {
+    serial.print(F("\nSET_MIN_WEIGHT"));
   }
   if (commands_list & SET_SEND_TIME) {
     serial.print(F("\nSET_SEND_TIME"));

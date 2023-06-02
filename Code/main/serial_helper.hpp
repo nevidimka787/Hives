@@ -29,6 +29,12 @@ return_code_t getByteFromSerial(Stream& serial, char& result, char& last_char);
 // @return SUCCESS if value obtained, return error if no input or overflow
 return_code_t getByteFromSerial(Stream& serial, char& result);
 
+// Use "nan" to set nan.
+// @param serial - input stream
+// @param result - scaned value can be nan of +- inf
+// @return SUCCESS if value obtained, return error if no input or input is  invalid.
+return_code_t scanFloatFromSerial(Stream& serial, float& result);
+
 // @param serial - input stream
 // @param phone_number - string with number
 // @return SUCCESS if phone number is obtained, ERROR if one is incorrect or too long
@@ -66,6 +72,11 @@ return_code_t scanTime(struct date_time& date_time_i, Stream& serial);
 // @param last_char - last scaned char. The char isn't a part of a time
 // @return SUCCESS if time is obtained, ERROR if one is incorrect
 return_code_t scanTime(struct date_time& date_time_i, Stream& serial, char& last_char);
+
+// safety read from serial function
+// @param serail - input stream
+// @param not_available_symbol - return this symbol if the serial does't available
+char readAwailable(Stream& serial, char not_available_symbol = '\0');
 
 return_code_t waitAvailable(Stream& serial, int timeout = 1000) {
   if (serial.available()) {
@@ -164,6 +175,79 @@ return_code_t getByteFromSerial(Stream& serial, char& result) {
   return SUCCESS;
 }
 
+return_code_t scanFloatFromSerial(Stream& serial, float& result) {
+  char c;
+  result = 0.0f;
+  bool sign = false; // positive
+  do {
+    if (waitAvailable(serial) != SUCCESS) {
+      return ERROR;
+    }
+    c = serial.read();
+  } while (isSpaceSymbol(c));
+
+  if (c == '-') {
+    sign = true; // negative
+    if (waitAvailable(serial) != SUCCESS) {
+      return ERROR;
+    }
+    c = serial.read();
+  } else if ((c == 'n' || c == 'N') && waitAvailable(serial) == SUCCESS) {
+    c = serial.read();
+    if (c == 'a' || c == 'A' && waitAvailable(serial) == SUCCESS) {
+      c = serial.read();
+      if (c == 'n' || c == 'N') {
+        result = 0.0f / 0.0f;
+        return SUCCESS;
+      }
+    }
+    return ERROR;
+  }
+
+
+  if (!isDigitSymbol(c)) {
+    return ERROR;
+  }
+
+  do {
+    result *= 10.f;
+    result += (float)(c - '0');
+    if (waitAvailable(serial) != SUCCESS) {
+      if (sign) {
+        result = -result;
+      }
+      return SUCCESS;
+    }
+    c = serial.read();
+  } while (isDigitSymbol(c));
+
+  if (c != '.') {
+    if (sign) {
+      result = -result;
+    }
+    return SUCCESS;
+  }
+
+  float power = 0.1f;
+
+  while (waitAvailable(serial) == SUCCESS) {
+    c = serial.read();
+    if (!isDigitSymbol(c)) {
+      if (sign) {
+        result = -result;
+      }
+      return SUCCESS;
+    }
+    result += (float)(c - '0') * power;
+    power /= 10.0f;
+  }
+  
+  if (sign) {
+    result = -result;
+  }
+  return SUCCESS;
+}
+
 return_code_t scanPhoneNumber(Stream& serial, char* phone_number) {
   int p = 1; // zero symbol set in the first while cycle
 
@@ -248,6 +332,13 @@ return_code_t scanTime(struct date_time& date_time_i, Stream& serial, char& last
     return ERROR;
   }
   return getByteFromSerial(serial, date_time_i.second, last_char);
+}
+
+char readAwailable(Stream& serial, char not_available_symbol = '\0') {
+  if (waitAvailable(serial) != SUCCESS) {
+    return not_available_symbol;
+  }
+  return serial.read();
 }
 
 

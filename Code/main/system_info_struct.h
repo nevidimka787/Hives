@@ -4,6 +4,7 @@ typedef enum {
   NORMAL = 0,
   HAPPEN,
   SEND,
+  WAIT_NORMALISATION
 } system_warning_status_t;
 
 struct system_info {

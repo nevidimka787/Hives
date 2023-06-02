@@ -248,7 +248,7 @@ return_code_t Sim800Config(int timeout) {
 return_code_t printAllSMSToSerial() {
   sim800.println(F("AT+CMGL=\"ALL\""));
  
-  return printUntilOk(sim800);
+  return printUntilOk(1000, sim800);
 }
 
 return_code_t getLastSMSId(int& last_sms_id) {
@@ -268,7 +268,7 @@ return_code_t printSMSToSerial(int sms_number) {
   
   Serial.println(F("printSMSToSerial:"));
 
-  return printUntilOk(sim800);
+  return printUntilOk(1000, sim800);
 }
 
 return_code_t printMeasuredDataTo(Stream& serial) {
@@ -276,12 +276,16 @@ return_code_t printMeasuredDataTo(Stream& serial) {
   serial.println(dht.readHumidity());
   serial.print(F("Temperature: "));
   serial.println(dht.readTemperature());
+  serial.print(F("Weight: "));
+  serial.println(scale.read());
 
   return SUCCESS;
 }
 
 return_code_t shortPrintMeasuredDataTo(Stream& serial) {
-  serial.print(F("Environmental data\nTemperature: "));
+  serial.print(F("Environmental data\nWeight: "));
+  serial.print(scale.read());
+  serial.print(F(" <no units>\nTemperature: "));
   serial.print(dht.readTemperature());
   serial.print(F(" C\nHumidity: "));
   serial.print(dht.readHumidity());
