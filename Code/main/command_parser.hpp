@@ -100,7 +100,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
   SET_MAX_TEMPERATURE
   SET_MAX_HUMIDITY
   SET_MIN_TEMPERATURE
-  SET_MIN_TEMPERATURE
+  SET_MIN_HUMIDITY
   PRINT_SMS
   PRINT_SMS_ALL
   PRINT_STORED_DATA
@@ -236,8 +236,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
             request.commands_list |= SET_MIN_HUMIDITY;
-            request.min_humidity = serial.parseFloat();
-            return SUCCESS;
+            return scanFloatFromSerial(serial, request.min_humidity);
           case 'T':
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
@@ -252,8 +251,17 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
             request.commands_list |= SET_MIN_TEMPERATURE;
-            request.min_temperature = serial.parseFloat();
-            return SUCCESS;
+            return scanFloatFromSerial(serial, request.min_temperature);
+          case 'W':
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'G', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'H', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+            
+            request.commands_list |= SET_MIN_WEIGHT;
+            return scanFloatFromSerial(serial, request.min_weight);
           default: goto RETURN_ERROR;
           }
         case 'A':
@@ -272,8 +280,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
             request.commands_list |= SET_MAX_HUMIDITY;
-            request.max_humidity = serial.parseFloat();
-            return SUCCESS;
+            return scanFloatFromSerial(serial, request.max_humidity);
           case 'T':
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'M', RETURN_ERROR);
@@ -288,8 +295,17 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
             IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
             request.commands_list |= SET_MAX_TEMPERATURE;
-            request.max_temperature = serial.parseFloat();
-            return SUCCESS;
+            return scanFloatFromSerial(serial, request.max_temperature);
+          case 'W':
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'G', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'H', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+            IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+            
+            request.commands_list |= SET_MAX_WEIGHT;
+            return scanFloatFromSerial(serial, request.max_weight);
           default: goto RETURN_ERROR;
           }
         default: goto RETURN_ERROR;

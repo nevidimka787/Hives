@@ -43,6 +43,15 @@ SoftwareSerial sim800(SIM800_TX, SIM800_RX);
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
 
+#include <HX711.h>
+
+enum HX711_PINS {
+  HX711_DOUT = 3,
+  HX711_SCK = 4
+};
+
+HX711 scale;
+
 // the variable store counter value that was writed in global time update event
 unsigned long date_time_last_update_time_point;
 #include "date_time_struct.hpp"
@@ -60,7 +69,7 @@ unsigned long date_time_last_update_time_point;
 #include "return_codes.hpp"
 #include "serial_helper.hpp"
 
-// system_main_action execution time
+// systemMainAction execution time
 // only millis
 unsigned long system_update_time_point;
 unsigned long system_update_period = 60000; // 60 seconds
@@ -135,7 +144,7 @@ void eventsFromSIM800(struct system_info& result_system_info) {
     printDebug(F("eventsFromSIM800: Event by sim800 response.\n"));
 
     system_update_time_point = millis();
-    result_system_info.sim800_result = system_main_action(global_system_info);
+    result_system_info.sim800_result = systemMainAction(global_system_info);
   }
 }
 
@@ -145,27 +154,13 @@ void eventsFromSerial(struct system_info& result_system_info) {
   if (result_system_info.serial_result == SUCCESS) {
     printRequest(request, Serial);
     result_system_info.serial_result = doRequestAsSerial(request, global_system_info);
-  }
-
-  switch (result_system_info.serial_result) {
-  case SUCCESS:
-    printDebug(F("eventsFromSerial: SUCCESS\n"));
-    break;
-  case ERROR:
-    printDebug(F("eventsFromSerial: ERROR\n"));
-    break;
-  case NO_REQUEST:
-    blinkAndWait_2();
-    break;
-  default:
-    printDebug(F("eventsFromSerial: unrecognise response "));
-    printDebugInLine(result_system_info.serial_result);
-    printDebugInLine('\t');
-    printDebugInLine(SUCCESS);
-    printDebugInLine('\n');
-
-    blinkAndWait_4();
-    break;
+    if ( result_system_info.serial_result == SUCCESS) {
+      printDebug(F("eventsFromSerial: doRequestAsSerial: SUCCESS\n"));
+    } else {
+      printDebug(F("eventsFromSerial: doRequestAsSerial: ERROR\n"));
+    }
+  } else if (result_system_info.serial_result == ERROR) {
+    printError(F("eventsFromSerial: pars error\n"));
   }
 }
 
@@ -173,11 +168,11 @@ void eventsFromSystem(struct system_info& result_system_info) {
   if (eventAvailable(system_update_time_point) == SUCCESS) {
     system_update_time_point = millis() + system_update_period;
     printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
-    result_system_info.sim800_result = system_main_action(global_system_info);
+    result_system_info.sim800_result = systemMainAction(global_system_info);
   }
 
   if (result_system_info.sim800_result == ERROR) {
-    result_system_info.sim800_result = system_fix_action();
+    result_system_info.sim800_result = systemFixAction();
   }
 
   if (result_system_info.send_measured_data && eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
@@ -210,11 +205,11 @@ void setup() {
 #ifdef SERIAL_DEBUG
   Serial.begin(115200);
 #endif // SERIAL_DEBUG
-  sim800.begin(9600);
+  sim800.begin(1200);
 
   printDebug(F("setup: Begin\n"));
 
-  return_code_t return_code = initSim800(10); // one attemp arout 10 seconds -> 100 seconds until timeout
+  return_code_t return_code = initSim800(60); // one attemp arout 1 seconds -> 60 seconds until timeout
   
   dht.begin();
 
@@ -226,6 +221,11 @@ void setup() {
   if (h != h) {
     printWarning(F("main: Temperature sensor initialisation failed.\n"));
     // fatalError();
+  }
+
+  scale.begin(HX711_DOUT, HX711_SCK);
+  if (!scale.wait_ready_timeout(1000)) {
+    printError("setup: HX711 not found.");
   }
 
   systemSetup(global_system_info);

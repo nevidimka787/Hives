@@ -12,7 +12,7 @@ bool isDigitSymbol(char c);
 // @param str1 - first string
 // @param str2 - second string
 // @return 1 if first string grater second string, 0 if strings are same, 1 if first string less second
-int compareStrs(const char* str1, const char* str2);
+int8_t compareStrs(const char* str1, const char* str2);
 
 // @param str - changed string
 // @param length - length of the string (will be increment in function)
@@ -47,7 +47,7 @@ void addToEndOfStr(char* str, int& length, char symbol) {
   for (int symbol_id = 0; symbol_id < length; ++symbol_id) {
     str[symbol_id] = str[symbol_id + 1];
   }
-  str[last_symbol_id] = symbol;
+  str[length] = symbol;
   ++length;
   return;
 }

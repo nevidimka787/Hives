@@ -1,11 +1,19 @@
 #pragma once
 
+#include "eeprom_commands.hpp"
 #include "events_manager.hpp"
 #include "message_generator.hpp"
 #include "return_codes.hpp"
 #include "system_info_struct.h"
 
 using namespace return_codes;
+
+// if value grater then max or less then min, then change status.
+// @param value - input value
+// @param max - high edge
+// @param min - low edge
+// @param current_status - status of this value (can be changed)
+void checkMaxMin(float value, float max, float min, system_warning_status_t& current_status);
 
 // get last SMS from sim800
 // execute commands from SMS as user
@@ -29,6 +37,25 @@ return_code_t systemMainAction(struct system_info& global_system_info);
 // @return always SUCCESS
 return_code_t systemUpdateSendTime(struct system_info& result_system_info);
 
+void checkMaxMin(float value, float max, float min, system_warning_status_t& current_status) {
+  if (value > max || value < min) { // if max or min is NAN then egde isn't checked
+    if (current_status == WAIT_NORMALISATION) {
+      return;
+    }
+    if (current_status == HAPPEN) {
+      current_status = SEND;
+      return;
+    }
+    current_status = HAPPEN;
+    return;
+  }
+   
+  if (current_status == HAPPEN || current_status == WAIT_NORMALISATION) {
+    current_status = NORMAL;
+  }
+  return;
+}
+
 return_code_t systemMainAction(struct system_info& global_system_info) {
   return_code_t result = SUCCESS;
   
@@ -41,7 +68,68 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
     printDebug(F("system_main_action: systemUpdateSendTime\n"));
     result = systemUpdateSendTime(global_system_info);
     global_system_info.set_send_time = false;
-  }  
+  }
+
+  struct StoredData stored_data = getStoredData();
+
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  long weight = scale.read();
+
+  checkMaxMin(humidity, stored_data.max_humidity, stored_data.min_humidity, global_system_info.humidity_warning);
+  checkMaxMin(temperature, stored_data.max_temperature, stored_data.min_temperature, global_system_info.temperature_warning);
+  checkMaxMin(weight, stored_data.max_weight, stored_data.min_weight, global_system_info.weight_warning);
+  
+  if (global_system_info.humidity_warning == SEND || global_system_info.temperature_warning == SEND || global_system_info.weight_warning == SEND) {
+#ifdef SERIAL_DEBUG
+    if (global_system_info.humidity_warning == SEND) {
+      Serial.print(F("WARNING: Humidity out of range!\n"));
+    }
+    if (global_system_info.temperature_warning == SEND) {
+      Serial.print(F("WARNING: Temperature out of range!\n"));
+    }
+    if (global_system_info.weight_warning == SEND) {
+      Serial.print(F("WARNING: Weight out of range!\n"));
+    }
+    
+    shortPrintMeasuredDataTo(Serial);
+    shortPrintStoredDataTo(Serial);
+#endif // SERIAL_DEBUG
+
+    // return result;
+
+    char phone_number[20];
+    getPhoneNumber(phone_number);
+    sim800.print(F("AT+CMGS=\"+"));
+    sim800.print(phone_number);
+    sim800.println(F("\""));
+    waitAvailable(sim800);
+
+    if (global_system_info.humidity_warning == SEND) {
+      global_system_info.humidity_warning = WAIT_NORMALISATION;
+      sim800.print(F("WARNING: Humidity out of range!\n"));
+    }
+    if (global_system_info.temperature_warning == SEND) {
+      global_system_info.temperature_warning = WAIT_NORMALISATION;
+      sim800.print(F("WARNING: Temperature out of range!\n"));
+    }
+    if (global_system_info.weight_warning == SEND) {
+      global_system_info.weight_warning = WAIT_NORMALISATION;
+      sim800.print(F("WARNING: Weight out of range!\n"));
+    }
+
+    shortPrintMeasuredDataTo(sim800);
+    shortPrintStoredDataTo(sim800);
+
+    sim800.println((char)26);
+
+    for(char attemp = 0; attemp < 10; ++attemp) {
+      if (checkSim800OK(1000) == SUCCESS) {
+        return SUCCESS;
+      }
+    }
+    return ERROR;
+  }
 
   return result;
 }

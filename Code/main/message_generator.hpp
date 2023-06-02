@@ -78,17 +78,21 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
     }
   }
   if (request.commands_list & SET_MAX_TEMPERATURE) {
-    
     printDebug(F("parsRequest: setMaxTemperature\n"));
     if (setMaxTemperature(request.max_temperature) == SUCCESS) {
       return_codes |= SET_MAX_TEMPERATURE;
     }
   }
   if (request.commands_list & SET_MAX_HUMIDITY) {
-    
     printDebug(F("parsRequest: setMaxHumidity\n"));
     if (setMaxHumidity(request.max_humidity) == SUCCESS) {
       return_codes |= SET_MAX_HUMIDITY;
+    }
+  }
+  if (request.commands_list & SET_MAX_WEIGHT) {
+    printDebug(F("parsRequest: setMaxWeight\n"));
+    if (setMaxWeight(request.max_weight) == SUCCESS) {
+      return_codes |= SET_MAX_WEIGHT;
     }
   }
   if (request.commands_list & SET_MIN_TEMPERATURE) {
@@ -103,6 +107,12 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
     printDebug(F("parsRequest: setMinHumidity\n"));
     if (setMinHumidity(request.min_humidity) == SUCCESS) {
       return_codes |= SET_MIN_HUMIDITY;
+    }
+  }
+  if (request.commands_list & SET_MIN_WEIGHT) {
+    printDebug(F("parsRequest: setMinxWeight\n"));
+    if (setMinWeight(request.min_weight) == SUCCESS) {
+      return_codes |= SET_MIN_WEIGHT;
     }
   }
   if (request.commands_list & SET_SEND_TIME) {
@@ -137,7 +147,7 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
     }
   }
   if (request.commands_list & UPDATE_DATE_TIME) {
-    printDebug(F("parsRequest: printMeasuredDataToSerial\n"));
+    printDebug(F("parsRequest: updateDateTime\n"));
     struct date_time date_time_i;
     if (updateDateTime(date_time_i, sim800) == SUCCESS) {
       return_codes |= UPDATE_DATE_TIME;
@@ -177,21 +187,25 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
   }
 
   if (request.commands_list & SET_MAX_TEMPERATURE) {
-    
     printDebug(F("parsRequest: setMaxTemperature\n"));
     if (setMaxTemperature(request.max_temperature) == SUCCESS) {
       return_codes |= SET_MAX_TEMPERATURE;
     }
   }
   if (request.commands_list & SET_MAX_HUMIDITY) {
-    
     printDebug(F("parsRequest: setMaxHumidity\n"));
     if (setMaxHumidity(request.max_humidity) == SUCCESS) {
       return_codes |= SET_MAX_HUMIDITY;
     }
   }
-  if (request.commands_list & SET_MIN_TEMPERATURE) {
+  if (request.commands_list & SET_MAX_WEIGHT) {
     
+    printDebug(F("parsRequest: setMaxWeight\n"));
+    if (setMaxWeight(request.max_weight) == SUCCESS) {
+      return_codes |= SET_MAX_WEIGHT;
+    }
+  }
+  if (request.commands_list & SET_MIN_TEMPERATURE) {
     printDebug(F("parsRequest: setMinTemperature\n"));
     if (setMinTemperature(request.min_temperature) == SUCCESS) {
       return_codes |= SET_MIN_TEMPERATURE;
@@ -202,6 +216,13 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
     printDebug(F("parsRequest: setMinHumidity\n"));
     if (setMinHumidity(request.min_humidity) == SUCCESS) {
       return_codes |= SET_MIN_HUMIDITY;
+    }
+  }
+  if (request.commands_list & SET_MIN_WEIGHT) {
+    
+    printDebug(F("parsRequest: setMinWeight\n"));
+    if (setMinWeight(request.min_weight) == SUCCESS) {
+      return_codes |= SET_MIN_WEIGHT;
     }
   }
   if (request.commands_list & SET_SEND_TIME) {
@@ -259,5 +280,19 @@ return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
   to_serial.println(F("Default message from SIM800.\n"));
   to_serial.write((char)26);
 
-  return checkSim800OK(10000);
+  for(char attemp = 0; attemp < 10; ++attemp) {
+    if (checkSim800OK(1000) == SUCCESS) {
+      return SUCCESS;
+    }
+  }
+  return ERROR;
 }
+
+
+
+
+
+
+
+
+
