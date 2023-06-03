@@ -50,6 +50,8 @@ enum HX711_PINS {
   HX711_SCK = 4
 };
 
+// *** HX711 ***
+
 HX711 scale;
 
 // the variable store counter value that was writed in global time update event
@@ -108,7 +110,6 @@ void loop();
 void fatalError() {
   printError("FATAL ERROR\n");
 
-  pinMode(13, OUTPUT);
   while (1) {
     blinkAndWait_alarm();
   }
@@ -205,7 +206,9 @@ void setup() {
 #ifdef SERIAL_DEBUG
   Serial.begin(115200);
 #endif // SERIAL_DEBUG
-  sim800.begin(1200);
+  sim800.begin(300);
+
+  pinMode(13, OUTPUT);
 
   printDebug(F("setup: Begin\n"));
 
@@ -237,6 +240,8 @@ void loop() {
   eventsFromSIM800(global_system_info);
   eventsFromSerial(global_system_info);
   eventsFromSystem(global_system_info);
+
+  LEDOff();
 }
 
 

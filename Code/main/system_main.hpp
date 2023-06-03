@@ -1,5 +1,6 @@
 #pragma once
 
+#include "blink.hpp"
 #include "eeprom_commands.hpp"
 #include "events_manager.hpp"
 #include "message_generator.hpp"
@@ -42,21 +43,27 @@ void checkMaxMin(float value, float max, float min, system_warning_status_t& cur
     if (current_status == WAIT_NORMALISATION) {
       return;
     }
-    if (current_status == HAPPEN) {
-      current_status = SEND;
-      return;
-    }
-    current_status = HAPPEN;
+    current_status = SEND;
     return;
   }
    
-  if (current_status == HAPPEN || current_status == WAIT_NORMALISATION) {
+  if (current_status == WAIT_NORMALISATION) {
+    printDebug(F("checkMaxMin: value: "));
+    printDebugInLine(value);
+    printDebugInLine(F(" in range: ( "));
+    printDebugInLine(max);
+    printDebugInLine(F(" : "));
+    printDebugInLine(min);
+    printDebugInLine(F(" ) return to normal\n"));
+
     current_status = NORMAL;
   }
   return;
 }
 
 return_code_t systemMainAction(struct system_info& global_system_info) {
+  LEDOn();
+
   return_code_t result = SUCCESS;
   
   result = systemDoSMS(global_system_info);
@@ -81,14 +88,23 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
   checkMaxMin(weight, stored_data.max_weight, stored_data.min_weight, global_system_info.weight_warning);
   
   if (global_system_info.humidity_warning == SEND || global_system_info.temperature_warning == SEND || global_system_info.weight_warning == SEND) {
-#ifdef SERIAL_DEBUG
     if (global_system_info.humidity_warning == SEND) {
-      Serial.print(F("WARNING: Humidity out of range!\n"));
+      global_system_info.humidity_warning = WAIT_NORMALISATION;
     }
     if (global_system_info.temperature_warning == SEND) {
-      Serial.print(F("WARNING: Temperature out of range!\n"));
+      global_system_info.temperature_warning = WAIT_NORMALISATION;
     }
     if (global_system_info.weight_warning == SEND) {
+      global_system_info.weight_warning = WAIT_NORMALISATION;
+    }
+#ifdef SERIAL_DEBUG
+    if (global_system_info.humidity_warning == WAIT_NORMALISATION) {
+      Serial.print(F("WARNING: Humidity out of range!\n"));
+    }
+    if (global_system_info.temperature_warning == WAIT_NORMALISATION) {
+      Serial.print(F("WARNING: Temperature out of range!\n"));
+    }
+    if (global_system_info.weight_warning == WAIT_NORMALISATION) {
       Serial.print(F("WARNING: Weight out of range!\n"));
     }
     
@@ -105,16 +121,13 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
     sim800.println(F("\""));
     waitAvailable(sim800);
 
-    if (global_system_info.humidity_warning == SEND) {
-      global_system_info.humidity_warning = WAIT_NORMALISATION;
+    if (global_system_info.humidity_warning == WAIT_NORMALISATION) {
       sim800.print(F("WARNING: Humidity out of range!\n"));
     }
-    if (global_system_info.temperature_warning == SEND) {
-      global_system_info.temperature_warning = WAIT_NORMALISATION;
+    if (global_system_info.temperature_warning == WAIT_NORMALISATION) {
       sim800.print(F("WARNING: Temperature out of range!\n"));
     }
-    if (global_system_info.weight_warning == SEND) {
-      global_system_info.weight_warning = WAIT_NORMALISATION;
+    if (global_system_info.weight_warning == WAIT_NORMALISATION) {
       sim800.print(F("WARNING: Weight out of range!\n"));
     }
 

@@ -6,6 +6,10 @@ void blinkAndWait_2 ();
 void blinkAndWait_4 ();
 // infinite blink 5 times in second and wait one second
 void blinkAndWait_alarm ();
+// turn on LED
+void LEDOn();
+// turn off LED
+void LEDOff();
 
 void blinkAndWait_4 () {
   delay(250);
@@ -38,4 +42,12 @@ void blinkAndWait_alarm () {
   delay(200);
   digitalWrite(13, LOW);
   delay(1000);
+}
+
+void LEDOn() {
+  digitalWrite(13, HIGH);
+}
+
+void LEDOff() {
+  digitalWrite(13, LOW);
 }
