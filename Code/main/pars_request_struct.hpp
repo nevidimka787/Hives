@@ -14,6 +14,8 @@ struct ParsRequest {
   float min_temperature;
   float min_humidity;
   float min_weight;
+  long weight_offset;
+  float weight_scale;
   int sms_number;
   struct date_time date_time;
 };

@@ -155,7 +155,7 @@ MAIN_CONTINUE:
 }
 
 return_code_t checkSim800OK(int timeout, Stream& sim800_serial) {
-  //#define printUntilOk_AS_checkSim800OK
+  #define printUntilOk_AS_checkSim800OK
   #ifndef printUntilOk_AS_checkSim800OK
   char c;
   while(1) {

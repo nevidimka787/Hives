@@ -16,12 +16,14 @@ enum COMMANDS {
   SET_MIN_TEMPERATURE = 1L << 10, // set max numidity
   SET_MIN_HUMIDITY    = 1L << 11, // set min numidity
   SET_MIN_WEIGHT      = 1L << 12, // set min weight
-  SET_SEND_TIME       = 1L << 13, // set time of sending SMS that contain enviromental data
-  PRINT_SMS           = 1L << 14, // print selected SMS to serial (only Serial)
-  PRINT_SMS_ALL       = 1L << 15, // print all SMS to serial (only Serial)
-  PRINT_STORED_DATA   = 1L << 16, // print data that stored in eeprom (differense for Serial and sim800)
-  PRINT_MEASURED_DATA = 1L << 17, // print enviromental data that have been measured (differense for Serial and sim800)
-  UPDATE_DATE_TIME    = 1L << 18, // synchronise time (only Serial)
+  SET_WEIGHT_OFFSET   = 1L << 13, // set ofset of weight
+  SET_WEIGHT_SCALE    = 1L << 14, // set scale of weight
+  SET_SEND_TIME       = 1L << 15, // set time of sending SMS that contain enviromental data
+  PRINT_SMS           = 1L << 16, // print selected SMS to serial (only Serial)
+  PRINT_SMS_ALL       = 1L << 17, // print all SMS to serial (only Serial)
+  PRINT_STORED_DATA   = 1L << 18, // print data that stored in eeprom (differense for Serial and sim800)
+  PRINT_MEASURED_DATA = 1L << 19, // print enviromental data that have been measured (differense for Serial and sim800)
+  UPDATE_DATE_TIME    = 1L << 20, // synchronise time (only Serial)
 
   DEBUG_COMM          = 1L << 31  // doesn't has default action
 };

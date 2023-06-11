@@ -17,7 +17,9 @@ enum ERROM_IDS {
   PHONE_NUMBER_ID         = 16, // size = 20  type = char[]
   SEND_TIME_ID            = 36, // size = 3   type = char[]
   MAX_WEIGHT_ID           = 39, // size = 4   type = float
-  MIN_WEIGHT_ID           = 43  // size = 4   type = float
+  MIN_WEIGHT_ID           = 43, // size = 4   type = float
+  WEIGHT_OFFSET_ID        = 47, // size = 4   type = long
+  WEIGHT_SCALE_ID         = 51  // size = 4   type = float
 };
 
 struct StoredData {
@@ -28,6 +30,8 @@ struct StoredData {
   float max_humidity;
   float max_weight;
   float min_weight;  
+  long weight_offset;
+  float weight_scale;
   char send_time[3]; // hh:mm:ss
 
   // private
@@ -111,6 +115,14 @@ return_code_t setMaxWeight(float weight);
 // @return always SUCCESS
 return_code_t setMinWeight(float weight);
 
+// @param offset - offset of weight value
+// @return always SUCCESS
+return_code_t setScalesOffset(long offset);
+
+// @param scale - scale of weight value
+// @return always SUCCESS
+return_code_t setScalesScale(float scale);
+
 // @param date_time - time in which enviroment date will be sended
 // @return always SUCCESS
 return_code_t setSendTime(const struct date_time& date_time);
@@ -161,10 +173,14 @@ return_code_t EEPROM_getStr(int idx, char* str, unsigned size) {
 void returnToDefaults() {
   EEPROM_putStr(PHONE_NUMBER_ID, "00000000000");
   EEPROM_putStr(SEND_TIME_ID, (const char[]){(char)255, (char)255, (char)255}, 3);
-  EEPROM.put(MAX_TEMPERATURE_ID, 100.0f);
-  EEPROM.put(MIN_TEMPERATURE_ID, 0.0f);
-  EEPROM.put(MAX_HUMIDITY_ID, 100.0f);
-  EEPROM.put(MIN_HUMIDITY_ID, 0.0f);
+  EEPROM.put(MAX_TEMPERATURE_ID, 0.0f/0.0f);
+  EEPROM.put(MIN_TEMPERATURE_ID, 0.0f/0.0f);
+  EEPROM.put(MAX_HUMIDITY_ID, 0.0f/0.0f);
+  EEPROM.put(MIN_HUMIDITY_ID, 0.0f/0.0f);
+  EEPROM.put(MAX_WEIGHT_ID, 0.0f/0.0f);
+  EEPROM.put(MIN_WEIGHT_ID, 0.0f/0.0f);
+  EEPROM.put(WEIGHT_OFFSET_ID, 0L);
+  EEPROM.put(WEIGHT_SCALE_ID, 1.0f);
 
   return;
 }
@@ -179,6 +195,8 @@ struct StoredData getStoredData() {
   EEPROM.get(MAX_WEIGHT_ID, data.max_weight);
   EEPROM.get(MIN_WEIGHT_ID, data.min_weight);
   EEPROM_getStr(SEND_TIME_ID, data.send_time, 3);
+  EEPROM.get(WEIGHT_OFFSET_ID, data.weight_offset);
+  EEPROM.get(WEIGHT_SCALE_ID, data.weight_scale);
 
   return data;  
 }
@@ -223,6 +241,16 @@ return_code_t setMinWeight(float weight) {
   return SUCCESS;
 }
 
+return_code_t setScalesOffset(long offset) {
+  EEPROM.put(WEIGHT_OFFSET_ID, offset);
+  return SUCCESS;
+}
+
+return_code_t setScalesScale(float scale) {
+  EEPROM.put(WEIGHT_SCALE_ID, scale);
+  return SUCCESS;
+}
+
 return_code_t setSendTime(const struct date_time& date_time) {
   EEPROM.put(SEND_TIME_ID, date_time.hour);
   EEPROM.put(SEND_TIME_ID + 1, date_time.minute);
@@ -255,6 +283,10 @@ return_code_t printStoredDataTo(Stream& serial) {
   serial.println(data.max_weight);
   serial.print(F("printStoredDataTo: weight min: "));
   serial.println(data.min_weight);
+  serial.print(F("printStoredDataTo: weight offset: "));
+  serial.println(data.weight_offset);
+  serial.print(F("printStoredDataTo: weight scale: "));
+  serial.println(data.weight_scale);
   serial.print(F("printStoredDataTo: send_time: "));
   if (data.send_time[0] >= 24) {
     serial.print(F("not send enviromental data\n"));
@@ -292,9 +324,13 @@ return_code_t shortPrintStoredDataTo(Stream& serial) {
   serial.print(data.min_humidity);
   serial.print(F(" %\nMAX_WEIGHT: "));
   serial.print(data.max_weight);
-  serial.print(F(" <no units>\nMIN_WEIGHT: "));
+  serial.print(F(" kg\nMIN_WEIGHT: "));
   serial.print(data.min_weight);
-  serial.print(F(" <no units>\nSEND_TIME: "));
+  serial.print(F(" kg\nWEIGHT_OFFSET: "));
+  serial.print(data.weight_offset);
+  serial.print(F(" kg\nWEIGHT_SCALE: "));
+  serial.print(data.weight_scale);
+  serial.print(F(" kg\nSEND_TIME: "));
   if (data.send_time[0] >= 24) {
     serial.print(F("not send enviromental data\n"));
   } else {

@@ -43,8 +43,13 @@ int getSymbolIfAvailableAndNotSpace(Stream& serial);
 // SET_NUMBER
 // SET_MAX_TEMPERATURE
 // SET_MAX_HUMIDITY
+// SET_MAX_WEIGHT
 // SET_MIN_TEMPERATURE
 // SET_MIN_TEMPERATURE
+// SET_MIN_WEIGHT
+// SET_SEND_TIME
+// SET_WEIGHT_OFFSET
+// SET_WEIGHT_SCALE
 // PRINT_SMS
 // PRINT_SMS_ALL
 // PRINT_STORED_DATA
@@ -91,20 +96,27 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
   /*
   commands list:
 
-  DELETE_SMS
-  CHECK_OK
-  CMGF_EN
-  GET_LAST_SMS_ID
-  SEND_SMS
-  SET_NUMBER
-  SET_MAX_TEMPERATURE
-  SET_MAX_HUMIDITY
-  SET_MIN_TEMPERATURE
-  SET_MIN_HUMIDITY
-  PRINT_SMS
-  PRINT_SMS_ALL
-  PRINT_STORED_DATA
-  UPDATE_DATE_TIME
+   DELETE_SMS
+   CHECK_OK
+   CMGF_EN
+   GET_LAST_SMS_ID
+   SEND_SMS
+   SET_NUMBER
+   SET_MAX_TEMPERATURE
+   SET_MAX_HUMIDITY
+   SET_MAX_WEIGHT
+   SET_MIN_TEMPERATURE
+   SET_MIN_TEMPERATURE
+   SET_MIN_WEIGHT
+   SET_SEND_TIME
+   SET_WEIGHT_OFFSET
+   SET_WEIGHT_SCALE
+   PRINT_SMS
+   PRINT_SMS_ALL
+   PRINT_STORED_DATA
+   UPDATE_DATE_TIME
+   i, I -- PRINT_MEASURED_DATA
+   # -- DEBUG_COMM
 
   i, I -- PRINT_MEASURED_DATA
   # -- DEBUG_COMM
@@ -333,6 +345,37 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
         
         request.commands_list |= SET_SEND_TIME;
         return scanTime(request.date_time, serial);
+      case 'W':
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'I', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'G', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'H', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+        IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+
+        switch (getSymbolIfAvailableAndNotSpace(serial)) {
+        case 'O':
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'F', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'F', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
+
+          request.commands_list |= SET_WEIGHT_OFFSET;
+          return scanLongFromSerial(serial, request.weight_offset);
+        case 'S':
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'C', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+          IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
+
+          request.commands_list |= SET_WEIGHT_SCALE;
+          return scanFloatFromSerial(serial, request.weight_scale);
+        default: goto RETURN_ERROR;
+        }
+
       default: goto RETURN_ERROR;
       }
     default: goto RETURN_ERROR;

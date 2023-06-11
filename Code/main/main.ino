@@ -206,7 +206,7 @@ void setup() {
 #ifdef SERIAL_DEBUG
   Serial.begin(115200);
 #endif // SERIAL_DEBUG
-  sim800.begin(300);
+  sim800.begin(2400);
 
   pinMode(13, OUTPUT);
 

@@ -252,8 +252,9 @@ int getDaysBetweenYears(uint8_t year1, uint8_t year2) {
 }
 
 unsigned long getDaysBetweenDates(const struct date_time& date_1, const struct date_time& date_2) {
-  unsigned long days_diff = getDaysToNextYear(date_1) - getDaysToNextYear(date_2);
-  days_diff += getDaysBetweenYears(date_1.year, date_2.year);
+  unsigned long days_diff = getDaysBetweenYears(date_1.year, date_2.year);
+  days_diff += getDaysToNextYear(date_2);
+  days_diff -= getDaysToNextYear(date_1);
   return days_diff;  
 }
 

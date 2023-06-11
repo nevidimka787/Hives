@@ -115,6 +115,20 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
       return_codes |= SET_MIN_WEIGHT;
     }
   }
+  if (request.commands_list & SET_WEIGHT_OFFSET) {
+    
+    printDebug(F("parsRequest: setScalesOffset\n"));
+    if (setScalesOffset(request.weight_offset) == SUCCESS) {
+      return_codes |= SET_WEIGHT_OFFSET;
+    }
+  }
+  if (request.commands_list & SET_WEIGHT_SCALE) {
+    
+    printDebug(F("parsRequest: setScalesScale\n"));
+    if (setScalesScale(request.weight_scale) == SUCCESS) {
+      return_codes |= SET_WEIGHT_SCALE;
+    }
+  }
   if (request.commands_list & SET_SEND_TIME) {
     
     printDebug(F("parsRequest: setSendTime\n"));
@@ -155,12 +169,10 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
 
   }
   if (request.commands_list & DEBUG_COMM) {
-    printDebug(F("parsRequest: DEBUG_COMM: parsSMS 2\n"));
+    printDebug(F("parsRequest: DEBUG_COMM: sendDefaultSMS\n"));
 
-    struct ParsRequest request = {0};
-    if (parsSMS(2, request, sim800) == SUCCESS) {
-      printRequest(request, Serial);
-      doRequestAsSIM800(request, global_system_info);
+    return_code_t result = sendDefaultSMS();
+    if (result == SUCCESS) {
       return_codes |= DEBUG_COMM;
     }
   }
@@ -223,6 +235,20 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
     printDebug(F("parsRequest: setMinWeight\n"));
     if (setMinWeight(request.min_weight) == SUCCESS) {
       return_codes |= SET_MIN_WEIGHT;
+    }
+  }
+  if (request.commands_list & SET_WEIGHT_OFFSET) {
+    
+    printDebug(F("parsRequest: setScalesOffset\n"));
+    if (setScalesOffset(request.weight_offset) == SUCCESS) {
+      return_codes |= SET_WEIGHT_OFFSET;
+    }
+  }
+  if (request.commands_list & SET_WEIGHT_SCALE) {
+    
+    printDebug(F("parsRequest: setScalesScale\n"));
+    if (setScalesScale(request.weight_scale) == SUCCESS) {
+      return_codes |= SET_WEIGHT_SCALE;
     }
   }
   if (request.commands_list & SET_SEND_TIME) {

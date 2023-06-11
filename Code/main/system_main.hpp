@@ -81,7 +81,9 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
 
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-  long weight = scale.read();
+  scale.set_offset(stored_data.weight_offset);
+  scale.set_scale(stored_data.weight_scale);
+  float weight = scale.read();
 
   checkMaxMin(humidity, stored_data.max_humidity, stored_data.min_humidity, global_system_info.humidity_warning);
   checkMaxMin(temperature, stored_data.max_temperature, stored_data.min_temperature, global_system_info.temperature_warning);

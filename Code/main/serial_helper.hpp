@@ -36,6 +36,11 @@ return_code_t getByteFromSerial(Stream& serial, char& result);
 return_code_t scanFloatFromSerial(Stream& serial, float& result);
 
 // @param serial - input stream
+// @param result - scaned value can be nan of +- inf
+// @return SUCCESS if value obtained, return error if no input or input is invalid or overflow.
+return_code_t scanLongFromSerial(Stream& serial, long& result);
+
+// @param serial - input stream
 // @param phone_number - string with number
 // @return SUCCESS if phone number is obtained, ERROR if one is incorrect or too long
 return_code_t scanPhoneNumber(Stream& serial, char* phone_number);
@@ -213,19 +218,13 @@ return_code_t scanFloatFromSerial(Stream& serial, float& result) {
     result *= 10.f;
     result += (float)(c - '0');
     if (waitAvailable(serial) != SUCCESS) {
-      if (sign) {
-        result = -result;
-      }
-      return SUCCESS;
+      goto RETURN_SUCCESS;
     }
     c = serial.read();
   } while (isDigitSymbol(c));
 
   if (c != '.') {
-    if (sign) {
-      result = -result;
-    }
-    return SUCCESS;
+    goto RETURN_SUCCESS;
   }
 
   float power = 0.1f;
@@ -233,15 +232,54 @@ return_code_t scanFloatFromSerial(Stream& serial, float& result) {
   while (waitAvailable(serial) == SUCCESS) {
     c = serial.read();
     if (!isDigitSymbol(c)) {
-      if (sign) {
-        result = -result;
-      }
-      return SUCCESS;
+      goto RETURN_SUCCESS;
     }
     result += (float)(c - '0') * power;
     power /= 10.0f;
   }
-  
+
+RETURN_SUCCESS:  
+  if (sign) {
+    result = -result;
+  }
+  return SUCCESS;
+}
+
+return_code_t scanLongFromSerial(Stream& serial, long& result) {
+  char c;
+  result = 0.0f;
+  bool sign = false; // positive
+  do {
+    if (waitAvailable(serial) != SUCCESS) {
+      return ERROR;
+    }
+    c = serial.read();
+  } while (isSpaceSymbol(c));
+
+  if (c == '-') {
+    sign = true; // negative
+    if (waitAvailable(serial) != SUCCESS) {
+      return ERROR;
+    }
+    c = serial.read();
+  }
+
+  if (!isDigitSymbol(c)) {
+    return ERROR;
+  }
+
+  do {
+    if (result > (INT32_MAX - (long)(c - '0')) / 10L) {
+      return ERROR; // overflow
+    }
+    result *= 10.f;
+    result += (long)(c - '0');
+    if (waitAvailable(serial) != SUCCESS) {
+      goto RETURN_SUCCESS;
+    }
+    c = serial.read();
+  } while (isDigitSymbol(c));
+RETURN_SUCCESS:
   if (sign) {
     result = -result;
   }

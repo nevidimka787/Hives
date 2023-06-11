@@ -34,7 +34,6 @@ return_code_t eventAvailable(unsigned long event_time_point, unsigned long max_t
 
 return_code_t eventAvailable(struct date_time& event_date_time) {
   if (compareDateTime(event_date_time, global_date_time) < 0) {
-    printDebug("eventAvailable: event_date_time < global_date_time\n");
     return SUCCESS;
   }
 
