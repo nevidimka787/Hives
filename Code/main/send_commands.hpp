@@ -272,19 +272,32 @@ return_code_t printSMSToSerial(int sms_number) {
 }
 
 return_code_t printMeasuredDataTo(Stream& serial) {
+  struct StoredData stored_data;
+  stored_data = getStoredData();
+  
   serial.print(F("printMeasuredDataToSerial:\nHumidity: "));
   serial.println(dht.readHumidity());
   serial.print(F("Temperature: "));
   serial.println(dht.readTemperature());
   serial.print(F("Weight: "));
-  serial.println(scale.read());
+  if (scale.wait_ready_timeout(1000)) {
+    scale.set_offset(stored_data.weight_offset);
+    scale.set_scale(stored_data.weight_scale);
+    serial.println(scale.get_units(10));
+  } else {
+    serial.println(F("nan"));
+  }
 
   return SUCCESS;
 }
 
 return_code_t shortPrintMeasuredDataTo(Stream& serial) {
   serial.print(F("Environmental data\nWeight: "));
-  serial.print(scale.read());
+  if (scale.wait_ready_timeout(1000)) {
+    serial.println(scale.get_units(10));
+  } else {
+    serial.println(F("nan"));
+  }
   serial.print(F(" <no units>\nTemperature: "));
   serial.print(dht.readTemperature());
   serial.print(F(" C\nHumidity: "));
@@ -320,20 +333,3 @@ return_code_t setSendTime(const struct date_time& date_time, struct system_info&
   system_info.set_send_time = true;
   return SUCCESS;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

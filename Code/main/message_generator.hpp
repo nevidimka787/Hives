@@ -313,12 +313,3 @@ return_code_t sendDefaultSMS(Stream& to_serial = sim800) {
   }
   return ERROR;
 }
-
-
-
-
-
-
-
-
-
