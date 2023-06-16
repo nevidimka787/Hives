@@ -43,7 +43,7 @@ SoftwareSerial sim800(SIM800_TX, SIM800_RX);
 // as the current DHT reading algorithm adjusts itself to work on faster procs.
 DHT dht(DHTPIN, DHTTYPE);
 
-#include <HX711.h>
+#include "HX711.hpp"
 
 enum HX711_PINS {
   HX711_DOUT = 3,
@@ -74,7 +74,7 @@ unsigned long date_time_last_update_time_point;
 // systemMainAction execution time
 // only millis
 unsigned long system_update_time_point;
-unsigned long system_update_period = 60000; // 60 seconds
+unsigned long system_update_period = 1000; // 60 seconds
 // update global date time execution time
 unsigned long date_time_update_time_point;
 
@@ -168,7 +168,7 @@ void eventsFromSerial(struct system_info& result_system_info) {
 void eventsFromSystem(struct system_info& result_system_info) {
   if (eventAvailable(system_update_time_point) == SUCCESS) {
     system_update_time_point = millis() + system_update_period;
-    printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
+    // printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
     result_system_info.sim800_result = systemMainAction(global_system_info);
   }
 
@@ -227,6 +227,7 @@ void setup() {
   }
 
   scale.begin(HX711_DOUT, HX711_SCK);
+  scale.set_raw_mode();
   if (!scale.wait_ready_timeout(1000)) {
     printError("setup: HX711 not found.");
   }

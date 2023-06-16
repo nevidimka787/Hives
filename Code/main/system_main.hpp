@@ -81,12 +81,12 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
 
   float humidity = dht.readHumidity();
   float temperature = dht.readTemperature();
-  float weight = 0.0f/0.0f;
-  if (scale.wait_ready_timeout(1000)) {
-    scale.set_offset(stored_data.weight_offset);
-    scale.set_scale(stored_data.weight_scale);
-    weight = scale.get_units(10);
-  }
+  scale.set_offset(stored_data.weight_offset);
+  scale.set_scale(stored_data.weight_scale);
+  float weight = scale.get_units(10, 1000);
+
+  Serial.print(F("systemMainAction_weight:"));
+  Serial.println(weight);
 
   checkMaxMin(humidity, stored_data.max_humidity, stored_data.min_humidity, global_system_info.humidity_warning);
   checkMaxMin(temperature, stored_data.max_temperature, stored_data.min_temperature, global_system_info.temperature_warning);

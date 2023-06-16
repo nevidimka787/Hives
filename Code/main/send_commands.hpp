@@ -46,6 +46,11 @@ struct SMS_pars_conditionals {
   bool sms_valied_valid;
 };
 
+// calculate scale and store it to eeprom
+// @param target_weoght - current weight on the scales
+// @return SUCCESS if recalculation was completed SUCCESSFULLY else return ERROR
+return_code_t calculateScale(float targer_weight);
+
 // send AT to sim800 and wait OK
 // @param timeout - time (in millisecinds) after that the function returns result
 // @param sim800_serial - stream checking by the function
@@ -116,9 +121,22 @@ return_code_t Sim800Config(int timeout = 1000);
 // @return always SUCCESS
 return_code_t setSendTime(const struct date_time& date_time, struct system_info& system_info);
 
+// tera scales
+// return SUCCESS if rate was complete successfully else ERROR
+return_code_t tareScales();
+
 // @param date_time_i - updated date time will be writed to here
 // @param data_source_serial - stream that provide the time and date
 return_code_t updateDateTime(struct date_time& date_time_i, Stream& data_source_serial = sim800);
+
+return_code_t calculateScale(float targer_weight) {
+  // scale.power_up();
+  if (scale.calibrate_scale(targer_weight, 10, 1000) != SUCCESS) {
+    return ERROR;
+  }
+  // scale.power_down();
+  return setScalesScale(scale.get_scale());
+}
 
 return_code_t printUntilOk(int timeout, Stream& sim800_serial, Stream& serial) {
   char c;
@@ -256,9 +274,9 @@ return_code_t getLastSMSId(int& last_sms_id) {
 
   last_sms_id = getNewestSMSFromNumberUntilOK(sim800);
 
-  printDebug(F("getLastSMSId: sms_number: "));
-  printDebugInLine(last_sms_id);
-  printDebugInLine('\n');
+  // printDebug(F("getLastSMSId: sms_number: "));
+  // printDebugInLine(last_sms_id);
+  // printDebugInLine('\n');
   return last_sms_id == 0 ? ERROR : SUCCESS;
 }
 
@@ -277,29 +295,30 @@ return_code_t printMeasuredDataTo(Stream& serial) {
   
   serial.print(F("printMeasuredDataToSerial:\nHumidity: "));
   serial.println(dht.readHumidity());
+  
   serial.print(F("Temperature: "));
   serial.println(dht.readTemperature());
+  
   serial.print(F("Weight: "));
-  if (scale.wait_ready_timeout(1000)) {
-    scale.set_offset(stored_data.weight_offset);
-    scale.set_scale(stored_data.weight_scale);
-    serial.println(scale.get_units(10));
-  } else {
-    serial.println(F("nan"));
-  }
+  scale.set_offset(stored_data.weight_offset);
+  scale.set_scale(stored_data.weight_scale);
+  serial.println(scale.get_units(100, 1000));
 
   return SUCCESS;
 }
 
 return_code_t shortPrintMeasuredDataTo(Stream& serial) {
+  struct StoredData stored_data;
+  stored_data = getStoredData();
+
   serial.print(F("Environmental data\nWeight: "));
-  if (scale.wait_ready_timeout(1000)) {
-    serial.println(scale.get_units(10));
-  } else {
-    serial.println(F("nan"));
-  }
+  scale.set_offset(stored_data.weight_offset);
+  scale.set_scale(stored_data.weight_scale);
+  serial.print(scale.get_units(100, 1000));
+  
   serial.print(F(" <no units>\nTemperature: "));
   serial.print(dht.readTemperature());
+  
   serial.print(F(" C\nHumidity: "));
   serial.print(dht.readHumidity());
   serial.println(F(" %"));
@@ -326,6 +345,15 @@ return_code_t updateDateTime(struct date_time& date_time_i, Stream& data_source_
   }
 
   return ERROR;
+}
+
+return_code_t tareScales() {
+  // scale.power_up();
+  if (scale.tare(10, 1000) != SUCCESS) {
+    return ERROR;
+  }
+  // scale.power_down();
+  return setScalesOffset(scale.get_offset());
 }
 
 return_code_t setSendTime(const struct date_time& date_time, struct system_info& system_info) {

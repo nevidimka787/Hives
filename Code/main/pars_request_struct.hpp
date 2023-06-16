@@ -14,8 +14,9 @@ struct ParsRequest {
   float min_temperature;
   float min_humidity;
   float min_weight;
-  long weight_offset;
+  float weight_offset;
   float weight_scale;
+  float target_weight;
   int sms_number;
   struct date_time date_time;
 };
@@ -60,14 +61,17 @@ void printCommandsList(long commands_list, Stream& serial) {
   serial.print(F("commands_list: "));
   serial.println(commands_list);
   serial.print(F("active commands"));
-  if (commands_list & DELETE_SMS_ALL) {
-    serial.print(F("\nDELETE_SMS_ALL"));
+  if (commands_list & CALCULATE_SCALE) {
+    serial.print(F("\nCALCULATE_SCALE"));
   }
   if (commands_list & CHECK_OK) {
     serial.print(F("\nCHECK_OK"));
   }
   if (commands_list & CMGF_EN) {
     serial.print(F("\nCMGF_EN"));
+  }
+  if (commands_list & DELETE_SMS_ALL) {
+    serial.print(F("\nDELETE_SMS_ALL"));
   }
   if (commands_list & GET_LAST_SMS_ID) {
     serial.print(F("\nGET_LAST_SMS_ID"));

@@ -149,6 +149,24 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
       return SUCCESS;
   case 'C':
     switch (getSymbolIfAvailableAndNotSpace(serial)) {
+    case 'A':
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'C', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'U', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'T', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != '_', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'S', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'C', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'L', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+      IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+
+      request.commands_list |= CALCULATE_SCALE;
+      return scanFloatFromSerial(serial, request.target_weight);
     case 'H':
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'C', RETURN_ERROR);
@@ -158,7 +176,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'K', RETURN_ERROR);
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
 
-      request.commands_list |= SUCCESS;
+      request.commands_list |= CHECK_OK;
       return SUCCESS;
     case 'O':
       IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'N', RETURN_ERROR);
@@ -363,7 +381,7 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
           IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1, RETURN_ERROR);
 
           request.commands_list |= SET_WEIGHT_OFFSET;
-          return scanLongFromSerial(serial, request.weight_offset);
+          return scanFloatFromSerial(serial, request.weight_offset);
         case 'S':
           IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'C', RETURN_ERROR);
           IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
@@ -424,6 +442,14 @@ return_code_t parsRequestFrom(Stream& serial, struct ParsRequest& request) {
       return SUCCESS;
     default: goto RETURN_ERROR;
     }
+  case 'T':
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'A', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'R', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'E', RETURN_ERROR);
+    IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != -1,  RETURN_ERROR);
+      
+    request.commands_list |= TARE;
+    return SUCCESS;
   case 'U':
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'P', RETURN_ERROR);
     IF_GOTO(getSymbolIfAvailableAndNotSpace(serial) != 'D', RETURN_ERROR);

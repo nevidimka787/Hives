@@ -34,6 +34,12 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
       return_codes |= DELETE_SMS_ALL;
     }
   }
+  if (request.commands_list & CALCULATE_SCALE) {
+    printDebug(F("parsRequest: calculateScale\n"));
+    if(calculateScale(request.target_weight) == SUCCESS) {
+      return_codes |= CALCULATE_SCALE;
+    }
+  }
   if (request.commands_list & CHECK_OK) {
     printDebug(F("parsRequest: Sim800Check\n"));
     if(Sim800Check() == SUCCESS) {
@@ -127,6 +133,12 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
     printDebug(F("parsRequest: setScalesScale\n"));
     if (setScalesScale(request.weight_scale) == SUCCESS) {
       return_codes |= SET_WEIGHT_SCALE;
+    }
+  }
+  if (request.commands_list & TARE) {
+    printDebug(F("parsRequest: tareScales\n"));
+    if(tareScales() == SUCCESS) {
+      return_codes |= TARE;
     }
   }
   if (request.commands_list & SET_SEND_TIME) {
@@ -249,6 +261,18 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
     printDebug(F("parsRequest: setScalesScale\n"));
     if (setScalesScale(request.weight_scale) == SUCCESS) {
       return_codes |= SET_WEIGHT_SCALE;
+    }
+  }
+  if (request.commands_list & CALCULATE_SCALE) {
+    printDebug(F("parsRequest: calculateScale\n"));
+    if(calculateScale(request.target_weight) == SUCCESS) {
+      return_codes |= CALCULATE_SCALE;
+    }
+  }
+  if (request.commands_list & TARE) {
+    printDebug(F("parsRequest: tareScales\n"));
+    if(tareScales() == SUCCESS) {
+      return_codes |= TARE;
     }
   }
   if (request.commands_list & SET_SEND_TIME) {
