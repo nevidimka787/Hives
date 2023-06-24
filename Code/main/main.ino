@@ -1,4 +1,4 @@
-#define SERIAL_DEBUG
+// #define SERIAL_DEBUG // enable debug messages
 
 // *** SIM800 ***
 
@@ -74,7 +74,7 @@ unsigned long date_time_last_update_time_point;
 // systemMainAction execution time
 // only millis
 unsigned long system_update_time_point;
-unsigned long system_update_period = 1000; // 60 seconds
+unsigned long system_update_period = 60000; // 60 seconds
 // update global date time execution time
 unsigned long date_time_update_time_point;
 
@@ -153,7 +153,9 @@ void eventsFromSerial(struct system_info& result_system_info) {
   struct ParsRequest request = {0};
   result_system_info.serial_result = parsRequestFrom(Serial, request);
   if (result_system_info.serial_result == SUCCESS) {
+#ifdef SERIAL_DEBUG
     printRequest(request, Serial);
+#endif //  // SERIAL_DEBUG
     result_system_info.serial_result = doRequestAsSerial(request, global_system_info);
     if ( result_system_info.serial_result == SUCCESS) {
       printDebug(F("eventsFromSerial: doRequestAsSerial: SUCCESS\n"));

@@ -316,7 +316,7 @@ return_code_t shortPrintMeasuredDataTo(Stream& serial) {
   scale.set_scale(stored_data.weight_scale);
   serial.print(scale.get_units(100, 1000));
   
-  serial.print(F(" <no units>\nTemperature: "));
+  serial.print(F(" kg\nTemperature: "));
   serial.print(dht.readTemperature());
   
   serial.print(F(" C\nHumidity: "));
