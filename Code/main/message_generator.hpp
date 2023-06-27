@@ -142,9 +142,8 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
     }
   }
   if (request.commands_list & SET_SEND_TIME) {
-    
     printDebug(F("parsRequest: setSendTime\n"));
-    if (setSendTime(request.date_time, global_system_info) == SUCCESS) {
+    if (setSendTime(request.date_time, global_system_info.set_send_time) == SUCCESS) {
       return_codes |= SET_SEND_TIME;
     }
   }
@@ -276,9 +275,8 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
     }
   }
   if (request.commands_list & SET_SEND_TIME) {
-    
     printDebug(F("parsRequest: setSendTime\n"));
-    if (setSendTime(request.date_time, global_system_info) == SUCCESS) {
+    if (setSendTime(request.date_time, global_system_info.set_send_time) == SUCCESS) {
       return_codes |= SET_SEND_TIME;
     }
   }

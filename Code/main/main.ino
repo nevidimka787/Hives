@@ -179,12 +179,37 @@ void eventsFromSystem(struct system_info& result_system_info) {
   }
 
   if (result_system_info.send_measured_data && eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
-    setNextDay(result_system_info.send_measured_data_time);
     struct ParsRequest request = {0};
-    
+
+    setNextDay(result_system_info.send_measured_data_time);
+
+    if (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) { // the event is still available after the day was incremented
+      if (updateDateTime(request.date_time, sim800) != SUCCESS) {
+        printError(F("eventsFromSystem: updateDateTime failed\n"));
+
+        result_system_info.send_measured_data_time.hour = 99;
+        request.commands_list |= SET_SEND_TIME;
+        request.commands_list |= PRINT_STORED_DATA;
+        request.date_time.hour = 99;
+
+        goto SEND_SMS;
+      }
+
+      while (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
+        setNextDay(request.date_time);
+      }
+
+      result_system_info.send_measured_data_time.year = request.date_time.year;
+      result_system_info.send_measured_data_time.month = request.date_time.month;
+      result_system_info.send_measured_data_time.day = request.date_time.day;
+    }
+  
+SEND_SMS:
+#ifdef SERIAL_DEBUG
     printDebug(F("eventsFromSystem: do PRINT_MEASURED_DATA\ndate_time: "));
     printDateTime(result_system_info.send_measured_data_time, Serial);
-    
+#endif // SERIAL_DEBUG
+
     request.commands_list |= PRINT_MEASURED_DATA;
     result_system_info.sim800_result = doRequestAsSIM800(request, global_system_info);
   }

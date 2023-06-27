@@ -34,6 +34,11 @@ namespace date_time {
 using namespace return_codes;
 using namespace date_time;
 
+// check that time in valid range
+// @param time - input time
+// @return SUCCESS if time is valid else ERORR
+return_code_t checkTimeValid(const struct date_time& time);
+
 // compare dates
 // @param date_1 - first date
 // @patam date_2 - second date
@@ -115,6 +120,14 @@ bool isLeapYear(uint8_t year);
 void printDateTime(struct date_time& date_time_i, Stream& serial);
 
 struct date_time global_date_time; // defined in date_time_struct.hpp
+
+return_code_t checkTimeValid(const struct date_time& time) {
+  if (time.hour > (char)23 || time.minute > (char)59 || time.second > (char)59) {
+     return ERROR;
+  }
+
+  return SUCCESS;
+}
 
 void printDateTime(struct date_time& date_time_i, Stream& serial) {
   serial.print("printDateTime: yy/mm/dd,hh:mm:ss ");

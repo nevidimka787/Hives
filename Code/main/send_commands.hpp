@@ -117,9 +117,9 @@ return_code_t Sim800Check(int timeout = 1000);
 return_code_t Sim800Config(int timeout = 1000);
 
 // @param date_time - time of sending SMS
-// @param system_info - system information
+// @param in_limits - time is valid (not higher 24:00:00)
 // @return always SUCCESS
-return_code_t setSendTime(const struct date_time& date_time, struct system_info& system_info);
+return_code_t setSendTime(const struct date_time& date_time, bool& in_limits);
 
 // tera scales
 // return SUCCESS if rate was complete successfully else ERROR
@@ -356,8 +356,8 @@ return_code_t tareScales() {
   return setScalesOffset(scale.get_offset());
 }
 
-return_code_t setSendTime(const struct date_time& date_time, struct system_info& system_info) {
+return_code_t setSendTime(const struct date_time& date_time, bool& in_limits) {
   setSendTime(date_time);
-  system_info.set_send_time = true;
+  in_limits = (checkTimeValid(date_time) == SUCCESS);
   return SUCCESS;
 }
