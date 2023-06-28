@@ -74,7 +74,8 @@ unsigned long date_time_last_update_time_point;
 // systemMainAction execution time
 // only millis
 unsigned long system_update_time_point;
-unsigned long system_update_period = 60000; // 60 seconds
+
+#define SYSTEM_UPDATE_PERIOD ((unsigned long)60000) // 60 seconds
 // update global date time execution time
 unsigned long date_time_update_time_point;
 
@@ -116,19 +117,9 @@ void fatalError() {
 }
 
 void systemSetup(struct system_info& result_system_info) {
-  result_system_info.sim800_result = updateDateTime(global_date_time, sim800);
-  if (result_system_info.sim800_result == SUCCESS) {
-    // update at 0:00 am
-    date_time_last_update_time_point = millis();
-    date_time_update_time_point = date_time_last_update_time_point + getSecondsToNextDay(global_date_time) * 1000LU;
-  } else {
-    // try update after one minute
-    date_time_update_time_point = millis() + 60000LU;
-  }
+  systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
 
-  systemUpdateSendTime(result_system_info);
-
-  system_update_time_point = millis();
+  system_update_time_point = millis(); // do system main action immediately
 }
 
 void eventsFromSIM800(struct system_info& result_system_info) {
@@ -144,7 +135,7 @@ void eventsFromSIM800(struct system_info& result_system_info) {
 
     printDebug(F("eventsFromSIM800: Event by sim800 response.\n"));
 
-    system_update_time_point = millis();
+    system_update_time_point = millis(); // do system main action immediately
     result_system_info.sim800_result = systemMainAction(global_system_info);
   }
 }
@@ -168,29 +159,35 @@ void eventsFromSerial(struct system_info& result_system_info) {
 }
 
 void eventsFromSystem(struct system_info& result_system_info) {
-  if (eventAvailable(system_update_time_point) == SUCCESS) {
-    system_update_time_point = millis() + system_update_period;
+  if (eventAvailable(system_update_time_point) == SUCCESS) { // do system main action
+    system_update_time_point = millis() + SYSTEM_UPDATE_PERIOD;
     // printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
     result_system_info.sim800_result = systemMainAction(global_system_info);
   }
 
-  if (result_system_info.sim800_result == ERROR) {
+  if (result_system_info.sim800_result == ERROR) { // do system fix action
     result_system_info.sim800_result = systemFixAction();
   }
-
-  if (result_system_info.send_measured_data && eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
+  
+  if (eventAvailable(date_time_update_time_point, 3600LU * 24 * 4 * 1000) == SUCCESS) { // update global time
+    systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
+  }
+ 
+// *** DO SCHEDULT EVENTS ***
+  if ( // send measured data
+    result_system_info.send_measured_data_flags & (TIME_OF_SEND_IS_CORRECT | GLOBAL_TIME_IS_SETTED) == (TIME_OF_SEND_IS_CORRECT | GLOBAL_TIME_IS_SETTED) &&
+    eventAvailable(result_system_info.send_measured_data_time) == SUCCESS
+  ) {
     struct ParsRequest request = {0};
 
-    setNextDay(result_system_info.send_measured_data_time);
-
-    if (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) { // the event is still available after the day was incremented
+    if (
+      setNextDay(result_system_info.send_measured_data_time) == ERROR ||
+      eventAvailable(result_system_info.send_measured_data_time) == SUCCESS
+    ) { // date is invalid OR the event is still available after the day was incremented
       if (updateDateTime(request.date_time, sim800) != SUCCESS) {
         printError(F("eventsFromSystem: updateDateTime failed\n"));
 
-        result_system_info.send_measured_data_time.hour = 99;
-        request.commands_list |= SET_SEND_TIME;
-        request.commands_list |= PRINT_STORED_DATA;
-        request.date_time.hour = 99;
+        result_system_info.send_measured_data_flags &= ~GLOBAL_TIME_IS_SETTED;
 
         goto SEND_SMS;
       }
@@ -212,18 +209,6 @@ SEND_SMS:
 
     request.commands_list |= PRINT_MEASURED_DATA;
     result_system_info.sim800_result = doRequestAsSIM800(request, global_system_info);
-  }
-
-  if (eventAvailable(date_time_update_time_point, 3600LU * 24 * 4 * 1000) == SUCCESS) {
-    result_system_info.sim800_result = updateDateTime(global_date_time, sim800);
-    if (result_system_info.sim800_result == SUCCESS) {
-      // update at 0:00 am
-      date_time_last_update_time_point = millis(); // must be for getCurrentTimeInSeconds
-      date_time_update_time_point = date_time_last_update_time_point + getSecondsToNextDay(global_date_time) * 1000LU;
-    } else {
-      // try update after one minute
-      date_time_update_time_point = millis() + 60000LU;
-    }
   }
 
   return;

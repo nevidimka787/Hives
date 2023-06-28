@@ -143,7 +143,13 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
   }
   if (request.commands_list & SET_SEND_TIME) {
     printDebug(F("parsRequest: setSendTime\n"));
-    if (setSendTime(request.date_time, global_system_info.set_send_time) == SUCCESS) {
+    bool in_limits = false;
+    if (setSendTime(request.date_time, in_limits) == SUCCESS) {
+      if (in_limits) {
+        global_system_info.send_measured_data_flags |= TIME_OF_SEND_IS_CORRECT;
+      } else {
+        global_system_info.send_measured_data_flags &= ~TIME_OF_SEND_IS_CORRECT;
+      }
       return_codes |= SET_SEND_TIME;
     }
   }
@@ -276,7 +282,13 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
   }
   if (request.commands_list & SET_SEND_TIME) {
     printDebug(F("parsRequest: setSendTime\n"));
-    if (setSendTime(request.date_time, global_system_info.set_send_time) == SUCCESS) {
+    bool in_limits = false;
+    if (setSendTime(request.date_time, in_limits) == SUCCESS) {
+      if (in_limits) {
+        global_system_info.send_measured_data_flags |= TIME_OF_SEND_IS_CORRECT;
+      } else {
+        global_system_info.send_measured_data_flags &= ~TIME_OF_SEND_IS_CORRECT;
+      }
       return_codes |= SET_SEND_TIME;
     }
   }
