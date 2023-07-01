@@ -7,8 +7,9 @@ typedef enum {
 } system_warning_status_t;
 
 typedef enum {
-  TIME_OF_SEND_IS_CORRECT = (uint8_t)1 << (uint8_t)0,
-  GLOBAL_TIME_IS_SETTED   = (uint8_t)1 << (uint8_t)1
+  GLOBAL_TIME_IS_SETTED         = (uint8_t)1 << (uint8_t)0,
+  TIME_OF_SEND_IS_CORRECT       = (uint8_t)1 << (uint8_t)1,
+  TIME_OF_SEND_MUST_BE_UPDATED  = (uint8_t)1 << (uint8_t)2
 } send_measured_data_flags_t;
 
 struct system_info {

@@ -150,6 +150,7 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
       } else {
         global_system_info.send_measured_data_flags &= ~TIME_OF_SEND_IS_CORRECT;
       }
+      global_system_info.send_measured_data_flags |= TIME_OF_SEND_MUST_BE_UPDATED;
       return_codes |= SET_SEND_TIME;
     }
   }
@@ -289,6 +290,7 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
       } else {
         global_system_info.send_measured_data_flags &= ~TIME_OF_SEND_IS_CORRECT;
       }
+      global_system_info.send_measured_data_flags |= TIME_OF_SEND_MUST_BE_UPDATED;
       return_codes |= SET_SEND_TIME;
     }
   }
@@ -312,8 +314,8 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
       return_codes &= ~(PRINT_STORED_DATA | PRINT_MEASURED_DATA);
       return_codes |=
       checkSim800OK(10000) == SUCCESS ?
-      request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA) :
-      0;
+        request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA) :
+        0;
     } else {
       sim800.println((char)27); // cancel
     }

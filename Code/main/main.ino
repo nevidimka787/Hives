@@ -1,4 +1,4 @@
-// #define SERIAL_DEBUG // enable debug messages
+#define SERIAL_DEBUG // enable debug messages
 
 // *** SIM800 ***
 
@@ -117,9 +117,12 @@ void fatalError() {
 }
 
 void systemSetup(struct system_info& result_system_info) {
+  printDebug(F("systemSetup: begin\n"));
+  systemSetSendTime(result_system_info);
   systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
 
   system_update_time_point = millis(); // do system main action immediately
+  printDebug(F("systemSetup: end\n"));
 }
 
 void eventsFromSIM800(struct system_info& result_system_info) {
@@ -136,7 +139,7 @@ void eventsFromSIM800(struct system_info& result_system_info) {
     printDebug(F("eventsFromSIM800: Event by sim800 response.\n"));
 
     system_update_time_point = millis(); // do system main action immediately
-    result_system_info.sim800_result = systemMainAction(global_system_info);
+    result_system_info.sim800_result = systemMainAction(result_system_info);
   }
 }
 
@@ -147,7 +150,7 @@ void eventsFromSerial(struct system_info& result_system_info) {
 #ifdef SERIAL_DEBUG
     printRequest(request, Serial);
 #endif //  // SERIAL_DEBUG
-    result_system_info.serial_result = doRequestAsSerial(request, global_system_info);
+    result_system_info.serial_result = doRequestAsSerial(request, result_system_info);
     if ( result_system_info.serial_result == SUCCESS) {
       printDebug(F("eventsFromSerial: doRequestAsSerial: SUCCESS\n"));
     } else {
@@ -161,8 +164,8 @@ void eventsFromSerial(struct system_info& result_system_info) {
 void eventsFromSystem(struct system_info& result_system_info) {
   if (eventAvailable(system_update_time_point) == SUCCESS) { // do system main action
     system_update_time_point = millis() + SYSTEM_UPDATE_PERIOD;
-    // printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
-    result_system_info.sim800_result = systemMainAction(global_system_info);
+    printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
+    result_system_info.sim800_result = systemMainAction(result_system_info);
   }
 
   if (result_system_info.sim800_result == ERROR) { // do system fix action
@@ -192,13 +195,20 @@ void eventsFromSystem(struct system_info& result_system_info) {
         goto SEND_SMS;
       }
 
-      while (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
+      while (eventAvailable(request.date_time) == SUCCESS) {
         setNextDay(request.date_time);
       }
 
       result_system_info.send_measured_data_time.year = request.date_time.year;
       result_system_info.send_measured_data_time.month = request.date_time.month;
       result_system_info.send_measured_data_time.day = request.date_time.day;
+
+#ifdef SERIAL_DEBUG
+      printDebug(F("eventsFromSystem: send_measured_data_time: "));
+      printDateTime(result_system_info.send_measured_data_time, Serial);
+      printDebugInLine('\n');
+#endif // SERIAL_DEBUG
+
     }
   
 SEND_SMS:
@@ -208,7 +218,7 @@ SEND_SMS:
 #endif // SERIAL_DEBUG
 
     request.commands_list |= PRINT_MEASURED_DATA;
-    result_system_info.sim800_result = doRequestAsSIM800(request, global_system_info);
+    result_system_info.sim800_result = doRequestAsSIM800(request, result_system_info);
   }
 
   return;

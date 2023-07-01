@@ -22,11 +22,6 @@ void checkMaxMin(float value, float max, float min, system_warning_status_t& cur
 // @return SUCCESS if some comands was executed, NO_REQUEST if nothing was executed, ERROR if parsing or exeqution failure
 return_code_t systemDoSMS(struct system_info& result_system_info);
 
-// get time of send SMS from eeprom
-// @param result_system_info - system information
-// @return always SUCCESS
-return_code_t systemGetSendTime(struct system_info& result_system_info);
-
 // try to fix system errors
 // reconfigure sim800
 // @return SUCCESS if fix was successfully
@@ -38,6 +33,11 @@ return_code_t systemFixAction();
 // @return ERROR if SMS execution or time update failure, else SUCCESS
 return_code_t systemMainAction(struct system_info& global_system_info);
 
+// get time of send SMS from eeprom
+// @param result_system_info - system information
+// @return always SUCCESS
+return_code_t systemSetSendTime(struct system_info& result_system_info);
+
 // skip past events
 // @param global_system_info - system information
 // @return SUCCESS if global time and event time are valid, else ERROR
@@ -47,6 +47,11 @@ return_code_t systemSkipPastEvents(struct system_info& global_system_info);
 // @param result_system_info - system information
 // @return always SUCCESS
 return_code_t systemUpdateGlobalTime(struct system_info& result_system_info, unsigned long& date_time_last_update_time_point, unsigned long& date_time_update_time_point);
+
+// update time points for all events
+// @param result_system_info - system information
+// return always SUCCESS
+return_code_t systemUpdateSendTimePoint(struct system_info& result_system_info);
 
 void checkMaxMin(float value, float max, float min, system_warning_status_t& current_status) {
   if (value > max || value < min) { // if max or min is NAN then egde isn't checked
@@ -81,7 +86,13 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
     return ERROR;
   }
 
-  result = systemGetSendTime(global_system_info);
+  if (global_system_info.send_measured_data_flags & TIME_OF_SEND_MUST_BE_UPDATED) {
+    result = systemSetSendTime(global_system_info);
+    result = systemUpdateSendTimePoint(global_system_info);
+    result = systemSkipPastEvents(global_system_info);
+
+    global_system_info.send_measured_data_flags &= ~TIME_OF_SEND_MUST_BE_UPDATED; // clear flag after update
+  }
 
   struct StoredData stored_data = getStoredData();
 
@@ -165,49 +176,70 @@ return_code_t systemSkipPastEvents(struct system_info& result_system_info) {
   }
 
   while (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
-    setNextDay(result_system_info.send_measured_data_time);
+#ifdef SERIAL_DEBUG
+    printDebug(F("systemSkipPastEvents: skip: "));
+    printDateTime(result_system_info.send_measured_data_time, Serial);
+    printDebug('\n');
+#endif // SERIAL_DEBUG
+
+    if (setNextDay(result_system_info.send_measured_data_time) != SUCCESS) {
+      printError(F("systemSkipPastEvents: invalid next day\n"));
+      return ERROR;
+    }
   }
   return SUCCESS;
 }
 
 return_code_t systemUpdateGlobalTime(struct system_info& result_system_info, unsigned long& date_time_last_update_time_point, unsigned long& date_time_update_time_point) {
   result_system_info.sim800_result = updateDateTime(global_date_time, sim800);
+
   if (result_system_info.sim800_result == SUCCESS) {
     // update at 0:00 am
     date_time_last_update_time_point = millis(); // must be for getCurrentTimeInSeconds
     date_time_update_time_point = date_time_last_update_time_point + getSecondsToNextDay(global_date_time) * 1000LU;
+    
     result_system_info.send_measured_data_flags |=  GLOBAL_TIME_IS_SETTED;
+    systemUpdateSendTimePoint(result_system_info);
+    systemSkipPastEvents(result_system_info);
   } else {
     // try update after one minute
     date_time_update_time_point = millis() + 60000LU;
     result_system_info.send_measured_data_flags &=  ~GLOBAL_TIME_IS_SETTED;
   }
 
-  systemSkipPastEvents(result_system_info);
+  result_system_info.sim800_result = systemSkipPastEvents(result_system_info);
+  
+#ifdef SERIAL_DEBUG
+  if (result_system_info.sim800_result != SUCCESS) {
+    printError(F("systemUpdateGlobalTime: invalid date\n"));
+  }
+#endif // SERIAL_DEBUG
 
   return result_system_info.sim800_result;
 }
 
-return_code_t systemGetSendTime(struct system_info& result_system_info) {
+return_code_t systemUpdateSendTimePoint(struct system_info& result_system_info) {
+  result_system_info.send_measured_data_time.day = global_date_time.day;
+  result_system_info.send_measured_data_time.month = global_date_time.month;
+  result_system_info.send_measured_data_time.year = global_date_time.year;
+}
+
+return_code_t systemSetSendTime(struct system_info& result_system_info) {
   getSendTime(result_system_info.send_measured_data_time);
-  if (checkTimeValid(result_system_info.send_measured_data_time) == true) {
+  if (checkTimeValid(result_system_info.send_measured_data_time) == SUCCESS) {
     result_system_info.send_measured_data_flags |= TIME_OF_SEND_IS_CORRECT;
+  } else {
+    result_system_info.send_measured_data_flags &= ~TIME_OF_SEND_IS_CORRECT;
   }
 
 #ifdef SERIAL_DEBUG
-  printDebug("systemGetSendTime: result_system_info.send_measured_data: time of send is ");
+  printDebug("systemGetSendTime: time of send is ");
   if (result_system_info.send_measured_data_flags & TIME_OF_SEND_IS_CORRECT) {
-    printDebugInLine("correct\n");
+    printDebugInLine(F("correct\n"));
   } else {
-    printDebugInLine("incorrect\n");
+    printDebugInLine(F("incorrect\n"));
   }
 #endif // SERIAL_DEBUG
-
-  if (result_system_info.send_measured_data_flags & GLOBAL_TIME_IS_SETTED) {
-    result_system_info.send_measured_data_time.year = global_date_time.year;
-    result_system_info.send_measured_data_time.month = global_date_time.month;
-    result_system_info.send_measured_data_time.day = global_date_time.day;
-  }
 
   return SUCCESS;
 }

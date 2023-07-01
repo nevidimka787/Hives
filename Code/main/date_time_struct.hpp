@@ -183,7 +183,9 @@ int8_t getDaysInCurrentMonth(const struct date_time& date) {
   };
 
   if (date.month < 1 || date.month > 12) {
-    printError(F("getDaysInCurrentMonth: month out of range"));
+    printError(F("getDaysInCurrentMonth: month: "));
+    printDebugInLine((int)date.month);
+    printDebugInLine(F(" out of range\n"));
     return -1;
   }
   if (date.month - 1 == FEBRUARY && isLeapYear(date.year)) {
