@@ -1,4 +1,7 @@
-#define SERIAL_DEBUG // enable debug messages
+#define SERIAL_DEBUG_FULL // enable all messages
+// #define SERIAL_ERROR      // enable error messages
+// #define SERIAL_WARNING    // enable warning messages
+// #define SERIAL_DEBUG      // enable debug messages
 
 // *** SIM800 ***
 
@@ -111,15 +114,25 @@ void loop();
 void fatalError() {
   printError("FATAL ERROR\n");
 
-  while (1) {
+  int times = 10;
+
+  while (times > 0) {
+    --times;
     blinkAndWait_alarm();
   }
+
+  exit(0);
 }
 
 void systemSetup(struct system_info& result_system_info) {
   printDebug(F("systemSetup: begin\n"));
   systemSetSendTime(result_system_info);
-  systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
+  result_system_info.sim800_result = systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
+
+  if (result_system_info.sim800_result == SUCCESS) {
+    systemUpdateSendTimePoint(result_system_info);
+    systemSkipPastEvents(result_system_info);
+  }
 
   system_update_time_point = millis(); // do system main action immediately
   printDebug(F("systemSetup: end\n"));
@@ -173,7 +186,14 @@ void eventsFromSystem(struct system_info& result_system_info) {
   }
   
   if (eventAvailable(date_time_update_time_point, 3600LU * 24 * 4 * 1000) == SUCCESS) { // update global time
-    systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
+    bool untimed_update = !(result_system_info.send_measured_data_flags & GLOBAL_TIME_IS_SETTED);
+
+    result_system_info.sim800_result = systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
+   
+    if (result_system_info.sim800_result == SUCCESS && untimed_update) {
+      systemUpdateSendTimePoint(result_system_info);
+      systemSkipPastEvents(result_system_info);
+    }
   }
  
 // *** DO SCHEDULT EVENTS ***
@@ -187,37 +207,23 @@ void eventsFromSystem(struct system_info& result_system_info) {
       setNextDay(result_system_info.send_measured_data_time) == ERROR ||
       eventAvailable(result_system_info.send_measured_data_time) == SUCCESS
     ) { // date is invalid OR the event is still available after the day was incremented
-      if (updateDateTime(request.date_time, sim800) != SUCCESS) {
-        printError(F("eventsFromSystem: updateDateTime failed\n"));
-
-        result_system_info.send_measured_data_flags &= ~GLOBAL_TIME_IS_SETTED;
-
-        goto SEND_SMS;
-      }
-
-      while (eventAvailable(request.date_time) == SUCCESS) {
-        setNextDay(request.date_time);
-      }
-
-      result_system_info.send_measured_data_time.year = request.date_time.year;
-      result_system_info.send_measured_data_time.month = request.date_time.month;
-      result_system_info.send_measured_data_time.day = request.date_time.day;
+      
+      result_system_info.sim800_result = systemUpdateGlobalTime(result_system_info, date_time_last_update_time_point, date_time_update_time_point);
 
 #ifdef SERIAL_DEBUG
       printDebug(F("eventsFromSystem: send_measured_data_time: "));
       printDateTime(result_system_info.send_measured_data_time, Serial);
       printDebugInLine('\n');
 #endif // SERIAL_DEBUG
-
     }
-  
-SEND_SMS:
+
 #ifdef SERIAL_DEBUG
     printDebug(F("eventsFromSystem: do PRINT_MEASURED_DATA\ndate_time: "));
     printDateTime(result_system_info.send_measured_data_time, Serial);
 #endif // SERIAL_DEBUG
 
     request.commands_list |= PRINT_MEASURED_DATA;
+    request.commands_list |= GET_TIME;
     result_system_info.sim800_result = doRequestAsSIM800(request, result_system_info);
   }
 
@@ -236,11 +242,11 @@ void setup() {
 
   return_code_t return_code = initSim800(60); // one attemp arout 1 seconds -> 60 seconds until timeout
   
-  dht.begin();
-
   if (return_code != SUCCESS) {
     fatalError();
   }
+
+  dht.begin();
 
   float h = dht.readHumidity();
   if (h != h) {

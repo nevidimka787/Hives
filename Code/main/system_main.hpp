@@ -116,7 +116,7 @@ return_code_t systemMainAction(struct system_info& global_system_info) {
     if (global_system_info.weight_warning == SEND) {
       global_system_info.weight_warning = WAIT_NORMALISATION;
     }
-#ifdef SERIAL_DEBUG
+#ifdef SERIAL_WARNING
     if (global_system_info.humidity_warning == WAIT_NORMALISATION) {
       Serial.print(F("WARNING: Humidity out of range!\n"));
     }
@@ -175,7 +175,9 @@ return_code_t systemSkipPastEvents(struct system_info& result_system_info) {
     return ERROR;
   }
 
-  while (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS) {
+  unsigned while_limit = 10000;
+
+  while (eventAvailable(result_system_info.send_measured_data_time) == SUCCESS && while_limit > 0) {
 #ifdef SERIAL_DEBUG
     printDebug(F("systemSkipPastEvents: skip: "));
     printDateTime(result_system_info.send_measured_data_time, Serial);
@@ -186,8 +188,11 @@ return_code_t systemSkipPastEvents(struct system_info& result_system_info) {
       printError(F("systemSkipPastEvents: invalid next day\n"));
       return ERROR;
     }
+
+    --while_limit;
   }
-  return SUCCESS;
+
+  return while_limit > 0 ? SUCCESS : ERROR;
 }
 
 return_code_t systemUpdateGlobalTime(struct system_info& result_system_info, unsigned long& date_time_last_update_time_point, unsigned long& date_time_update_time_point) {
@@ -199,15 +204,11 @@ return_code_t systemUpdateGlobalTime(struct system_info& result_system_info, uns
     date_time_update_time_point = date_time_last_update_time_point + getSecondsToNextDay(global_date_time) * 1000LU;
     
     result_system_info.send_measured_data_flags |=  GLOBAL_TIME_IS_SETTED;
-    systemUpdateSendTimePoint(result_system_info);
-    systemSkipPastEvents(result_system_info);
   } else {
     // try update after one minute
     date_time_update_time_point = millis() + 60000LU;
     result_system_info.send_measured_data_flags &=  ~GLOBAL_TIME_IS_SETTED;
   }
-
-  result_system_info.sim800_result = systemSkipPastEvents(result_system_info);
   
 #ifdef SERIAL_DEBUG
   if (result_system_info.sim800_result != SUCCESS) {

@@ -207,7 +207,7 @@ return_code_t doRequestAsSerial(const struct ParsRequest& request, struct system
 return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system_info& global_system_info) {
   long return_codes = 0;
 
-  if (request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA)) {
+  if (request.commands_list & (PRINT_STORED_DATA | PRINT_MEASURED_DATA | GET_TIME)) {
     char phone_number[20];
     getPhoneNumber(phone_number);
     sim800.print(F("AT+CMGS=\"+"));
@@ -216,6 +216,21 @@ return_code_t doRequestAsSIM800(const struct ParsRequest& request, struct system
     waitAvailable(sim800);
   }
 
+  if (request.commands_list & GET_TIME) {
+    printDebug(F("parsRequest: getCurrentTimeInSeconds\n"));
+
+    unsigned long time_in_sec;
+    if (getCurrentTimeInSeconds(time_in_sec) == SUCCESS) {
+      return_codes |= GET_TIME;
+    }
+    sim800.print(F("TIME: "));
+    sim800.print(time_in_sec / 3600);
+    time_in_sec %= 3600;
+    sim800.print(':');
+    sim800.print(time_in_sec / 60);
+    sim800.print(':');
+    sim800.println(time_in_sec % 60);
+  }
   if (request.commands_list & SET_MAX_TEMPERATURE) {
     printDebug(F("parsRequest: setMaxTemperature\n"));
     if (setMaxTemperature(request.max_temperature) == SUCCESS) {
