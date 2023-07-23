@@ -1,4 +1,4 @@
-#define SERIAL_DEBUG_FULL // enable all messages
+//#define SERIAL_DEBUG_FULL // enable all messages
 // #define SERIAL_ERROR      // enable error messages
 // #define SERIAL_WARNING    // enable warning messages
 // #define SERIAL_DEBUG      // enable debug messages
@@ -140,6 +140,8 @@ void systemSetup(struct system_info& result_system_info) {
 
 void eventsFromSIM800(struct system_info& result_system_info) {
   if (sim800.available()) {
+    LEDOn();
+
     printDebug(F("eventsFromSIM800: unparsed data begin\n"));
     while (sim800.available()) {
       char val = sim800.read();
@@ -152,7 +154,9 @@ void eventsFromSIM800(struct system_info& result_system_info) {
     printDebug(F("eventsFromSIM800: Event by sim800 response.\n"));
 
     system_update_time_point = millis(); // do system main action immediately
-    result_system_info.sim800_result = systemMainAction(result_system_info);
+    // result_system_info.sim800_result = systemMainAction(result_system_info);
+
+    LEDOff();
   }
 }
 
@@ -267,7 +271,9 @@ void setup() {
 
 void loop() {
   eventsFromSIM800(global_system_info);
+#ifdef SERIAL_DEBUG
   eventsFromSerial(global_system_info);
+#endif // SERIAL_DEBUG
   eventsFromSystem(global_system_info);
 
   LEDOff();
