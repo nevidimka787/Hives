@@ -77,8 +77,6 @@ void checkMaxMin(float value, float max, float min, system_warning_status_t& cur
 }
 
 return_code_t systemMainAction(struct system_info& global_system_info) {
-  LEDOn();
-
   return_code_t result = SUCCESS;
   
   result = systemDoSMS(global_system_info);

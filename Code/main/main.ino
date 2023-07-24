@@ -136,11 +136,19 @@ void systemSetup(struct system_info& result_system_info) {
 
   system_update_time_point = millis(); // do system main action immediately
   printDebug(F("systemSetup: end\n"));
+
+  delay(2000);
+  for (char i = 0; i < 1; ++i) {
+    LEDOn();
+    delay(500);
+    LEDOff();
+    delay(500);
+  }
+  delay(2000);
 }
 
 void eventsFromSIM800(struct system_info& result_system_info) {
   if (sim800.available()) {
-    LEDOn();
 
     printDebug(F("eventsFromSIM800: unparsed data begin\n"));
     while (sim800.available()) {
@@ -156,7 +164,17 @@ void eventsFromSIM800(struct system_info& result_system_info) {
     system_update_time_point = millis(); // do system main action immediately
     // result_system_info.sim800_result = systemMainAction(result_system_info);
 
-    LEDOff();
+
+    delay(2000);
+    for (char i = 0; i < 2; ++i) {
+      LEDOn();
+      delay(500);
+      LEDOff();
+      delay(500);
+    }
+    delay(2000);
+
+    // 2 blinks with in 2 secondt === eventsFromSIM800 -> sim800.available
   }
 }
 
@@ -183,10 +201,28 @@ void eventsFromSystem(struct system_info& result_system_info) {
     system_update_time_point = millis() + SYSTEM_UPDATE_PERIOD;
     printDebug(F("eventsFromSystem: Every 60 seconds event.\n"));
     result_system_info.sim800_result = systemMainAction(result_system_info);
+
+    delay(2000);
+    for (char i = 0; i < 3; ++i) {
+      LEDOn();
+      delay(500);
+      LEDOff();
+      delay(500);
+    }
+    delay(2000);
   }
 
   if (result_system_info.sim800_result == ERROR) { // do system fix action
     result_system_info.sim800_result = systemFixAction();
+
+    delay(2000);
+    for (char i = 0; i < 4; ++i) {
+      LEDOn();
+      delay(500);
+      LEDOff();
+      delay(500);
+    }
+    delay(2000);
   }
   
   if (eventAvailable(date_time_update_time_point, 3600LU * 24 * 4 * 1000) == SUCCESS) { // update global time
@@ -198,6 +234,15 @@ void eventsFromSystem(struct system_info& result_system_info) {
       systemUpdateSendTimePoint(result_system_info);
       systemSkipPastEvents(result_system_info);
     }
+
+    delay(2000);
+    for (char i = 0; i < 5; ++i) {
+      LEDOn();
+      delay(500);
+      LEDOff();
+      delay(500);
+    }
+    delay(2000);
   }
  
 // *** DO SCHEDULT EVENTS ***
@@ -229,6 +274,15 @@ void eventsFromSystem(struct system_info& result_system_info) {
     request.commands_list |= PRINT_MEASURED_DATA;
     request.commands_list |= GET_TIME;
     result_system_info.sim800_result = doRequestAsSIM800(request, result_system_info);
+
+    delay(2000);
+    for (char i = 0; i < 6; ++i) {
+      LEDOn();
+      delay(500);
+      LEDOff();
+      delay(500);
+    }
+    delay(2000);
   }
 
   return;
@@ -270,25 +324,17 @@ void setup() {
 }
 
 void loop() {
-  eventsFromSIM800(global_system_info);
+  eventsFromSIM800(global_system_info);  
 #ifdef SERIAL_DEBUG
   eventsFromSerial(global_system_info);
 #endif // SERIAL_DEBUG
   eventsFromSystem(global_system_info);
 
-  LEDOff();
+
+  if ((millis() / 1000) % 10 == 0) {
+    LEDOn();
+    delay(500);
+    LEDOff();
+    delay(500);
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
